@@ -7,6 +7,10 @@ const upload = require(
   "../middleware/uploadMiddleware"
 );
 
+const { optionalAuth } = require(
+  "../middleware/optionalAuthMiddleware"
+);
+
 const {
   analyzeResume,
 } = require(
@@ -15,7 +19,18 @@ const {
 
 router.post(
   "/upload",
-  upload.single("resume"),
+  optionalAuth,
+  (req, res, next) => {
+    upload.single("resume")(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err.message || "File upload failed",
+        });
+      }
+      next();
+    });
+  },
   analyzeResume
 );
 

@@ -4,6 +4,11 @@ const mongoose = require("mongoose");
 const resumeBuilderSchema =
   new mongoose.Schema(
     {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+
       name: {
         type: String,
         required: true,
@@ -17,6 +22,21 @@ const resumeBuilderSchema =
       phone: {
         type: String,
         required: true,
+      },
+
+      location: {
+        type: String,
+        default: "",
+      },
+
+      linkedin: {
+        type: String,
+        default: "",
+      },
+
+      jobTitle: {
+        type: String,
+        default: "",
       },
 
       summary: {
@@ -50,6 +70,11 @@ const resumeBuilderSchema =
       },
 
       achievements: {
+        type: String,
+        default: "",
+      },
+
+      certifications: {
         type: String,
         default: "",
       },

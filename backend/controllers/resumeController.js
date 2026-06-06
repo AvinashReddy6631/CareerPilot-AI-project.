@@ -2,8 +2,11 @@ const fs = require("fs");
 const pdfParse = require("pdf-parse");
 
 const Resume = require("../models/Resume");
+const { analyzeAts } = require("../utils/atsAnalyzer");
 
 const analyzeResume = async (req, res) => {
+  let filePath = null;
+
   try {
     const { jobDescription } = req.body;
 
@@ -14,79 +17,41 @@ const analyzeResume = async (req, res) => {
       });
     }
 
-    const dataBuffer = fs.readFileSync(req.file.path);
+    if (!jobDescription?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Job description is required",
+      });
+    }
 
+    filePath = req.file.path;
+    const dataBuffer = fs.readFileSync(filePath);
     const pdfData = await pdfParse(dataBuffer);
+    const resumeText = pdfData.text;
 
-    const resumeText = pdfData.text.toLowerCase();
+    if (!resumeText?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Could not extract text from PDF. Ensure the resume is text-based, not scanned images.",
+      });
+    }
 
-    const skillKeywords = [
-      "html",
-      "css",
-      "javascript",
-      "react",
-      "next.js",
-      "node.js",
-      "express",
-      "mongodb",
-      "mysql",
-      "git",
-      "github",
-      "tailwind css",
-      "bootstrap",
-      "python",
-      "java",
-      "c",
-      "flask",
-      "rest api",
-      "responsive design",
-      "ui/ux",
-      "problem solving",
-      "team collaboration",
-      "communication",
-    ];
-
-    const jdText = (jobDescription || "").toLowerCase();
-
-    const requiredSkills = skillKeywords.filter(
-      (skill) => jdText.includes(skill)
-    );
-
-    const matchedSkills = requiredSkills.filter(
-      (skill) => resumeText.includes(skill)
-    );
-
-    const missingSkills = requiredSkills.filter(
-      (skill) => !resumeText.includes(skill)
-    );
-
-    const atsScore =
-      requiredSkills.length > 0
-        ? Math.round(
-            (matchedSkills.length /
-              requiredSkills.length) *
-              100
-          )
-        : 0;
+    const analysis = analyzeAts(resumeText, jobDescription);
 
     const resume = await Resume.create({
+      user: req.user?._id || undefined,
       fileName: req.file.originalname,
-      resumeText,
-      atsScore,
-      skills: matchedSkills,
-      missingKeywords: missingSkills,
+      resumeText: resumeText.toLowerCase(),
+      atsScore: analysis.atsScore,
+      skills: analysis.matchedSkills,
+      missingKeywords: analysis.missingKeywords,
     });
 
     res.status(200).json({
       success: true,
-      atsScore,
-      matchedSkills,
-      missingSkills,
-      totalKeywords:
-        requiredSkills.length,
-      matchedCount:
-        matchedSkills.length,
-      resume,
+      fileName: req.file.originalname,
+      ...analysis,
+      resumeId: resume._id,
     });
   } catch (error) {
     console.log(error);
@@ -95,6 +60,10 @@ const analyzeResume = async (req, res) => {
       success: false,
       message: error.message,
     });
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
   }
 };
 

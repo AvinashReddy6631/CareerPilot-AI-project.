@@ -1,4 +1,5 @@
 const express = require("express");
+const { optionalAuth } = require("../middleware/optionalAuthMiddleware");
 
 const router = express.Router();
 
@@ -8,6 +9,7 @@ const {
 
 router.post(
   "/generate",
+  optionalAuth,
   generateRoadmap
 );
 

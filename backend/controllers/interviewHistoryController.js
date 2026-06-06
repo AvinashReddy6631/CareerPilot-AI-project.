@@ -12,16 +12,31 @@ const saveInterview = async (
       averageScore,
       strengths,
       weaknesses,
+      recommendations,
       recommendation,
+      averageCommunication,
+      averageConfidence,
+      grade,
+      summary,
     } = req.body;
 
     const interview =
       await InterviewHistory.create({
+        user: req.user?._id || undefined,
         role,
         averageScore,
         strengths,
         weaknesses,
-        recommendation,
+        recommendations:
+          recommendations ||
+          (recommendation ? [recommendation] : []),
+        recommendation:
+          recommendation ||
+          (recommendations?.[0] ?? ""),
+        averageCommunication,
+        averageConfidence,
+        grade,
+        summary,
       });
 
     res.status(201).json({

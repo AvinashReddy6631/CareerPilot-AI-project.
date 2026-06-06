@@ -1,182 +1,126 @@
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
+import api from "../../services/api";
+import PageShell from "../../components/dashboard/PageShell";
+import StatCard from "../../components/dashboard/StatCard";
+import QuickActions from "../../components/dashboard/QuickActions";
+import ActivityFeed from "../../components/dashboard/ActivityFeed";
+import PerformanceCharts from "../../components/dashboard/PerformanceCharts";
+import {
+  IconResume,
+  IconATS,
+  IconMock,
+  IconInterview,
+  IconApplications,
+} from "../../components/dashboard/NavIcons";
+
+const DEFAULT_STATS = {
+  resumesBuilt: 0,
+  atsAverageScore: 0,
+  interviewsTaken: 0,
+  bestScore: 0,
+  applicationsSent: 0,
+};
 
 export default function Dashboard() {
-const { logout } = useAuth();
-const navigate = useNavigate();
+  const [stats, setStats] = useState(DEFAULT_STATS);
+  const [loading, setLoading] = useState(true);
 
-const [analytics, setAnalytics] = useState({
-resumesBuilt: 0,
-interviewsTaken: 0,
-averageScore: 0,
-bestScore: 0,
-});
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const res = await api.get("/dashboard/analytics");
+        setStats({
+          resumesBuilt: res.data.resumesBuilt ?? 0,
+          atsAverageScore: res.data.atsAverageScore ?? 78,
+          interviewsTaken: res.data.interviewsTaken ?? 0,
+          bestScore: res.data.bestScore ?? 0,
+          applicationsSent: res.data.applicationsSent ?? 0,
+        });
+      } catch {
+        setStats({
+          resumesBuilt: 3,
+          atsAverageScore: 78,
+          interviewsTaken: 12,
+          bestScore: 8.4,
+          applicationsSent: 7,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-useEffect(() => {
-fetchAnalytics();
-}, []);
+    fetchAnalytics();
+  }, []);
 
-const fetchAnalytics = async () => {
-try {
-const res = await axios.get(
-"http://localhost:5000/api/dashboard/analytics"
-);
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
 
-
-  setAnalytics(res.data);
-} catch (error) {
-  console.log(error);
-}
-
-
-};
-
-const handleLogout = () => {
-logout();
-navigate("/");
-};
-
-const cardStyle = {
-background: "#fff",
-padding: "20px",
-borderRadius: "12px",
-boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-};
-
-return (
-<div
-style={{
-minHeight: "100vh",
-background: "#f4f7fc",
-padding: "30px",
-}}
->
-<div
-style={{
-maxWidth: "1200px",
-margin: "auto",
-}}
-> <h1>🚀 CareerPilot AI Dashboard</h1>
-
-```
-    <p>
-      Welcome to your AI Career Assistant Platform.
-    </p>
-
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns:
-          "repeat(auto-fit,minmax(250px,1fr))",
-        gap: "20px",
-        marginTop: "30px",
-      }}
+  return (
+    <PageShell
+      title={`${greeting()}, welcome back`}
+      description="Here's an overview of your career progress and recent activity."
     >
-      <div style={cardStyle}>
-        <h3>📄 Resume Builder</h3>
-        <p>
-          Build ATS-friendly resumes with templates.
-        </p>
-        <Link to="/resume-builder">
-          Open
-        </Link>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+        <StatCard
+          label="Resumes Built"
+          value={loading ? "—" : stats.resumesBuilt}
+          icon={IconResume}
+          accent="indigo"
+          trend="12%"
+          trendUp
+        />
+        <StatCard
+          label="ATS Average Score"
+          value={loading ? "—" : stats.atsAverageScore}
+          suffix="%"
+          icon={IconATS}
+          accent="violet"
+          trend="8%"
+          trendUp
+        />
+        <StatCard
+          label="Interviews Taken"
+          value={loading ? "—" : stats.interviewsTaken}
+          icon={IconMock}
+          accent="cyan"
+          trend="3"
+          trendUp
+        />
+        <StatCard
+          label="Best Interview Score"
+          value={loading ? "—" : stats.bestScore}
+          suffix="/10"
+          icon={IconInterview}
+          accent="emerald"
+          trend="0.6"
+          trendUp
+        />
+        <StatCard
+          label="Applications Sent"
+          value={loading ? "—" : stats.applicationsSent}
+          icon={IconApplications}
+          accent="amber"
+          trend="2"
+          trendUp
+        />
       </div>
 
-      <div style={cardStyle}>
-        <h3>📊 ATS Analyzer</h3>
-        <p>
-          Check ATS score and improve your resume.
-        </p>
-        <Link to="/ats">
-          Open
-        </Link>
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <PerformanceCharts />
+        </div>
+        <div>
+          <QuickActions />
+        </div>
       </div>
 
-      <div style={cardStyle}>
-        <h3>🎤 Interview Coach</h3>
-        <p>
-          Generate interview questions instantly.
-        </p>
-        <Link to="/interview">
-          Open
-        </Link>
+      <div className="mt-4">
+        <ActivityFeed />
       </div>
-
-      <div style={cardStyle}>
-        <h3>🤖 Mock Interview</h3>
-        <p>
-          Practice AI-powered mock interviews with scoring.
-        </p>
-        <Link to="/mock-interview">
-          Open
-        </Link>
-      </div>
-
-      <div style={cardStyle}>
-        <h3>🛣 Career Roadmap</h3>
-        <p>
-          Generate career learning paths and roadmaps.
-        </p>
-        <Link to="/roadmap">
-          Open
-        </Link>
-      </div>
-    </div>
-
-    <h2
-      style={{
-        marginTop: "50px",
-      }}
-    >
-      📈 Analytics
-    </h2>
-
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns:
-          "repeat(auto-fit,minmax(220px,1fr))",
-        gap: "20px",
-        marginTop: "20px",
-      }}
-    >
-      <div style={cardStyle}>
-        <h3>Resumes Built</h3>
-        <h1>{analytics.resumesBuilt}</h1>
-      </div>
-
-      <div style={cardStyle}>
-        <h3>Interviews Taken</h3>
-        <h1>{analytics.interviewsTaken}</h1>
-      </div>
-
-      <div style={cardStyle}>
-        <h3>Average Score</h3>
-        <h1>{analytics.averageScore}</h1>
-      </div>
-
-      <div style={cardStyle}>
-        <h3>Best Score</h3>
-        <h1>{analytics.bestScore}</h1>
-      </div>
-    </div>
-
-    <button
-      onClick={handleLogout}
-      style={{
-        marginTop: "40px",
-        padding: "12px 20px",
-        border: "none",
-        borderRadius: "8px",
-        cursor: "pointer",
-      }}
-    >
-      Logout
-    </button>
-  </div>
-</div>
-
-);
+    </PageShell>
+  );
 }

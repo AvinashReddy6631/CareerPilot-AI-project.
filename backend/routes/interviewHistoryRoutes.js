@@ -1,4 +1,5 @@
 const express = require("express");
+const { optionalAuth } = require("../middleware/optionalAuthMiddleware");
 
 const {
   saveInterview,
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.post(
   "/save",
+  optionalAuth,
   saveInterview
 );
 

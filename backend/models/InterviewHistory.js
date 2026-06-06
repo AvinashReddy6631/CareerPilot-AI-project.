@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const interviewHistorySchema =
   new mongoose.Schema(
     {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+
       role: {
         type: String,
         required: true,
@@ -18,9 +23,34 @@ const interviewHistorySchema =
         default: [],
       },
 
-      improvements: {
+      weaknesses: {
         type: [String],
         default: [],
+      },
+
+      recommendations: {
+        type: [String],
+        default: [],
+      },
+
+      averageCommunication: {
+        type: Number,
+        default: 0,
+      },
+
+      averageConfidence: {
+        type: Number,
+        default: 0,
+      },
+
+      grade: {
+        type: String,
+        default: "",
+      },
+
+      summary: {
+        type: String,
+        default: "",
       },
 
       recommendation: {

@@ -21,6 +21,9 @@ const roadmapRoutes = require(
 const dashboardRoutes = require(
   "./routes/dashboardRoutes"
 );
+const jobRoutes = require("./routes/jobRoutes");
+const applicationRoutes = require("./routes/applicationRoutes");
+const profileRoutes = require("./routes/profileRoutes");
 
 
 
@@ -87,6 +90,10 @@ app.use(
   "/api/roadmap",
   roadmapRoutes
 );
+
+app.use("/api/jobs", jobRoutes);
+app.use("/api/applications", applicationRoutes);
+app.use("/api/profile", profileRoutes);
 
 app.use(notFound);
 
