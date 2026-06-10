@@ -30,7 +30,7 @@ const getApplications = async (req, res) => {
 
 const createApplication = async (req, res) => {
   try {
-    const { clientId, job, status = "applied", notes = "" } = req.body;
+    const { clientId, job, status = "applied", notes = "", isAutoTrack = false } = req.body;
 
     if (!clientId || !job?.company || !job?.role) {
       return res.status(400).json({
@@ -39,14 +39,23 @@ const createApplication = async (req, res) => {
       });
     }
 
+    // Check if already tracked
     const existing = job.jobId
       ? await JobApplication.findOne({ clientId, jobId: job.jobId })
       : null;
 
     if (existing) {
+      // Update appliedAt if this is an auto-track from Apply button
+      if (isAutoTrack && existing.status === "saved") {
+        existing.status = status;
+        existing.appliedAt = new Date();
+        await existing.save();
+        return res.json({ success: true, application: existing, updated: true });
+      }
       return res.json({ success: true, application: existing, existing: true });
     }
 
+    // Create new application record
     const application = await JobApplication.create({
       clientId,
       jobId: job.jobId || "",
@@ -62,9 +71,14 @@ const createApplication = async (req, res) => {
       appliedAt: new Date(),
     });
 
-    res.status(201).json({ success: true, application });
+    res.status(201).json({ 
+      success: true, 
+      application,
+      isAutoTrack,
+      message: isAutoTrack ? "Application tracked" : undefined,
+    });
   } catch (error) {
-    console.log(error);
+    console.error("createApplication error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

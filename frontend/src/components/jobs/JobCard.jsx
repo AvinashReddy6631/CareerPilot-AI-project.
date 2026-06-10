@@ -32,6 +32,14 @@ export default function JobCard({
     }
   };
 
+  // Check if job URL is valid
+  const isJobValid = job.isValid !== false && !job.isExpired;
+  const jobStatusMessage = job.isExpired 
+    ? "Job posting expired" 
+    : !job.isValid 
+    ? "Job no longer available" 
+    : null;
+
   const companyInitial = job.company?.charAt(0)?.toUpperCase() || "?";
 
   return (
@@ -111,18 +119,30 @@ export default function JobCard({
         className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-slate-800"
         onClick={(e) => e.stopPropagation()}
       >
-        <a
-          href={job.applyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-        >
-          Apply on {job.source === "linkedin" ? "LinkedIn" : job.source.charAt(0).toUpperCase() + job.source.slice(1)}
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-          </svg>
-        </a>
+        {isJobValid ? (
+          <a
+            href={job.applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              // Auto-track when user clicks Apply
+              if (onTrack) {
+                onTrack(job);
+              }
+            }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+          >
+            Apply on {job.source === "linkedin" ? "LinkedIn" : job.source.charAt(0).toUpperCase() + job.source.slice(1)}
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+              <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+              <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+            </svg>
+          </a>
+        ) : (
+          <div className="flex flex-1 items-center justify-center rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            <span>{jobStatusMessage}</span>
+          </div>
+        )}
 
         <button
           type="button"

@@ -1,6 +1,7 @@
 const SavedJob = require("../models/SavedJob");
 const { searchJobs, getJobById, SOURCES } = require("../utils/jobCatalog");
 const { computeMatchScore } = require("../utils/jobMatcher");
+const { isValidUrl, isExpired, enrichJobWithValidation } = require("../utils/jobValidator");
 
 const search = async (req, res) => {
   try {
@@ -27,15 +28,29 @@ const search = async (req, res) => {
       limit: Number(limit),
     });
 
+    // Enrich jobs with validation metadata
+    result.jobs = result.jobs.map((job) => {
+      const enriched = enrichJobWithValidation(job);
+      
+      // Add match score if resume provided
+      if (resumeText?.trim()) {
+        const match = computeMatchScore(resumeText, enriched);
+        return { ...enriched, ...match };
+      }
+      return enriched;
+    });
+
+    // Sort by match score if available
     if (resumeText?.trim()) {
-      result.jobs = result.jobs.map((job) => {
-        const match = computeMatchScore(resumeText, job);
-        return { ...job, ...match };
-      });
       result.jobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
     }
 
-    res.json({ success: true, ...result, availableSources: SOURCES });
+    res.json({ 
+      success: true, 
+      ...result, 
+      availableSources: SOURCES,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
@@ -58,10 +73,27 @@ const matchJob = async (req, res) => {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
 
+    // Check job validity
+    if (!isValidUrl(job.applyUrl)) {
+      return res.status(410).json({
+        success: false,
+        message: "Job posting is no longer available",
+        job: enrichJobWithValidation(job),
+      });
+    }
+
+    if (isExpired(job.postedDaysAgo)) {
+      return res.status(410).json({
+        success: false,
+        message: "Job posting has expired",
+        job: enrichJobWithValidation(job),
+      });
+    }
+
     const match = computeMatchScore(resumeText, job);
-    res.json({ success: true, job: { ...job, ...match } });
+    res.json({ success: true, job: { ...enrichJobWithValidation(job), ...match } });
   } catch (error) {
-    console.log(error);
+    console.error("matchJob error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -123,20 +123,35 @@ export default function JobDetailPanel({ job, onClose }) {
           </div>
         )}
 
-        <a
-          href={job.applyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
-        >
-          Apply on Platform
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-          </svg>
-        </a>
-        <p className="text-center text-[11px] text-slate-400">
-          Opens in a new tab — you apply manually on the platform
-        </p>
+        {job.isValid !== false && !job.isExpired ? (
+          <>
+            <a
+              href={job.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
+            >
+              Apply on Platform
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+              </svg>
+            </a>
+            <p className="text-center text-[11px] text-slate-400">
+              Opens in a new tab — you apply manually on the platform
+            </p>
+          </>
+        ) : (
+          <div className="rounded-xl bg-red-50 p-4 dark:bg-red-500/10">
+            <p className="text-center text-sm font-semibold text-red-600 dark:text-red-400">
+              {job.isExpired ? "Job posting has expired" : "Job no longer available"}
+            </p>
+            <p className="mt-1 text-center text-xs text-red-500 dark:text-red-400/70">
+              {job.isExpired 
+                ? "This job was posted over 60 days ago" 
+                : "This job posting is no longer accessible"}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

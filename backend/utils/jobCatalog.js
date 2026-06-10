@@ -62,14 +62,21 @@ const RAW_LISTINGS = [
   { source: "indeed", type: "job", company: "Dunzo", role: "React Developer", location: "Bangalore, Karnataka", salary: "₹10–16 LPA", skills: ["react", "redux", "javascript", "css"], description: "Hyperlocal delivery app frontend. React, state management, and mobile web." },
 ];
 
-const CATALOG = RAW_LISTINGS.map((item, index) => ({
+const { filterValidJobs } = require("./jobValidator");
+
+const RAW_CATALOG = RAW_LISTINGS.map((item, index) => ({
   id: `${item.source}-${String(index + 1).padStart(3, "0")}`,
   ...item,
   applyUrl: buildApplyUrl(item.source, item.role, item.company, item.location),
   postedDaysAgo: (index % 14) + 1,
   remote: item.location.toLowerCase().includes("remote"),
   experience: item.type === "internship" ? "Internship" : index % 3 === 0 ? "Fresher" : "0–2 years",
+  isValid: true,
+  isExpired: false,
 }));
+
+// Filter out invalid and expired jobs at startup
+const { validJobs: CATALOG } = filterValidJobs(RAW_CATALOG);
 
 const normalize = (text) => (text || "").toLowerCase().trim();
 
