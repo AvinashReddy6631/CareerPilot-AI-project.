@@ -17,25 +17,42 @@ const registerUser = async (
     } = req.body;
 
     if (
-      !name ||
-      !email ||
+      !name?.trim() ||
+      !email?.trim() ||
       !password
     ) {
       return res.status(400).json({
+        success: false,
         message:
-          "All fields required",
+          "Name, email, and password are required",
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
       });
     }
 
     const exists =
       await User.findOne({
-        email,
+        email: email.toLowerCase(),
       });
 
     if (exists) {
       return res.status(400).json({
+        success: false,
         message:
-          "User already exists",
+          "User already exists with this email",
       });
     }
 
@@ -47,15 +64,15 @@ const registerUser = async (
 
     const user =
       await User.create({
-        name,
-        email,
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
         password:
           hashedPassword,
       });
 
     res.status(201).json({
       success: true,
-
+      message: "Account created successfully",
       token:
         generateToken(
           user._id
@@ -68,9 +85,11 @@ const registerUser = async (
       },
     });
   } catch (error) {
+    console.error("Register error:", error);
     res.status(500).json({
+      success: false,
       message:
-        error.message,
+        "Registration failed. Please try again.",
     });
   }
 };
@@ -85,9 +104,16 @@ const loginUser = async (
       password,
     } = req.body;
 
+    if (!email?.trim() || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
     const user =
       await User.findOne({
-        email,
+        email: email.toLowerCase(),
       });
 
     if (
@@ -99,7 +125,7 @@ const loginUser = async (
     ) {
       res.json({
         success: true,
-
+        message: "Login successful",
         token:
           generateToken(
             user._id
@@ -114,14 +140,17 @@ const loginUser = async (
       });
     } else {
       res.status(401).json({
+        success: false,
         message:
-          "Invalid Credentials",
+          "Invalid email or password",
       });
     }
   } catch (error) {
+    console.error("Login error:", error);
     res.status(500).json({
+      success: false,
       message:
-        error.message,
+        "Login failed. Please try again.",
     });
   }
 };

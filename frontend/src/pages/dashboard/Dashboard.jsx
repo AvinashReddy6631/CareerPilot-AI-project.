@@ -64,62 +64,91 @@ export default function Dashboard() {
       title={`${greeting()}, welcome back`}
       description="Here's an overview of your career progress and recent activity."
     >
+      {/* Stat Cards Grid */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        <StatCard
-          label="Resumes Built"
-          value={loading ? "—" : stats.resumesBuilt}
-          icon={IconResume}
-          accent="indigo"
-          trend="12%"
-          trendUp
-        />
-        <StatCard
-          label="ATS Average Score"
-          value={loading ? "—" : stats.atsAverageScore}
-          suffix="%"
-          icon={IconATS}
-          accent="violet"
-          trend="8%"
-          trendUp
-        />
-        <StatCard
-          label="Interviews Taken"
-          value={loading ? "—" : stats.interviewsTaken}
-          icon={IconMock}
-          accent="cyan"
-          trend="3"
-          trendUp
-        />
-        <StatCard
-          label="Best Interview Score"
-          value={loading ? "—" : stats.bestScore}
-          suffix="/10"
-          icon={IconInterview}
-          accent="emerald"
-          trend="0.6"
-          trendUp
-        />
-        <StatCard
-          label="Applications Sent"
-          value={loading ? "—" : stats.applicationsSent}
-          icon={IconApplications}
-          accent="amber"
-          trend="2"
-          trendUp
-        />
+        {loading ? (
+          <>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="dash-card h-28 animate-pulse bg-slate-100 dark:bg-slate-800" />
+            ))}
+          </>
+        ) : (
+          <>
+            <StatCard
+              label="Resumes Built"
+              value={stats.resumesBuilt}
+              icon={IconResume}
+              accent="indigo"
+              trend="12%"
+              trendUp
+            />
+            <StatCard
+              label="ATS Average Score"
+              value={stats.atsAverageScore}
+              suffix="%"
+              icon={IconATS}
+              accent="violet"
+              trend="8%"
+              trendUp
+            />
+            <StatCard
+              label="Interviews Taken"
+              value={stats.interviewsTaken}
+              icon={IconMock}
+              accent="cyan"
+              trend="3"
+              trendUp
+            />
+            <StatCard
+              label="Best Interview Score"
+              value={stats.bestScore}
+              suffix="/10"
+              icon={IconInterview}
+              accent="emerald"
+              trend="0.6"
+              trendUp
+            />
+            <StatCard
+              label="Applications Sent"
+              value={stats.applicationsSent}
+              icon={IconApplications}
+              accent="amber"
+              trend="2"
+              trendUp
+            />
+          </>
+        )}
       </div>
 
+      {/* Charts and Actions */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <PerformanceCharts />
+          {loading ? (
+            <div className="dash-card h-80 animate-pulse bg-slate-100 dark:bg-slate-800" />
+          ) : (
+            <PerformanceCharts />
+          )}
         </div>
         <div>
-          <QuickActions />
+          {loading ? (
+            <div className="dash-card h-80 animate-pulse bg-slate-100 dark:bg-slate-800" />
+          ) : (
+            <QuickActions />
+          )}
         </div>
       </div>
 
+      {/* Activity Feed */}
       <div className="mt-4">
-        <ActivityFeed />
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="dash-card h-20 animate-pulse bg-slate-100 dark:bg-slate-800" />
+            ))}
+          </div>
+        ) : (
+          <ActivityFeed />
+        )}
       </div>
     </PageShell>
   );
