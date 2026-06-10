@@ -114,13 +114,22 @@ export default function Profile() {
     try {
       const res = await updateProfile(formData);
       const updated = res.data.user;
+      
+      // Update all state with fresh data from backend
       setUser(updated);
       setMissingFields(res.data.missingFields || []);
       updateUser(updated);
+      
+      // Close drawer and show success
       setDrawerOpen(false);
       showToast("Profile updated successfully");
-      loadStats(updated.targetRole);
+      
+      // Reload stats if target role changed
+      if (updated.targetRole) {
+        loadStats(updated.targetRole);
+      }
     } catch (err) {
+      console.error("Profile save error:", err);
       setSaveError(err.response?.data?.message || "Failed to update profile. Please try again.");
     } finally {
       setSaving(false);

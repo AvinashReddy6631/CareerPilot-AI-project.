@@ -40,6 +40,7 @@ const updateProfile = async (req, res) => {
       profilePicture,
     } = req.body;
 
+    // Validate required name field
     if (!name?.trim()) {
       return res.status(400).json({
         success: false,
@@ -47,41 +48,50 @@ const updateProfile = async (req, res) => {
       });
     }
 
+    // Fetch fresh user from DB to avoid stale data
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    // Update all provided fields
     user.name = name.trim();
-    if (phone !== undefined) user.phone = phone.trim();
-    if (college !== undefined) user.college = college.trim();
-    if (degree !== undefined) user.degree = degree.trim();
-    if (branch !== undefined) user.branch = branch.trim();
-    if (graduationYear !== undefined) user.graduationYear = String(graduationYear).trim();
-    if (targetRole !== undefined) user.targetRole = targetRole.trim();
-    if (skills !== undefined) {
+    user.phone = phone ? phone.trim() : "";
+    user.college = college ? college.trim() : "";
+    user.degree = degree ? degree.trim() : "";
+    user.branch = branch ? branch.trim() : "";
+    user.graduationYear = graduationYear ? String(graduationYear).trim() : "";
+    user.targetRole = targetRole ? targetRole.trim() : "";
+    
+    // Handle skills - always parse as string from frontend, convert to array
+    if (skills !== undefined && skills !== null) {
       user.skills = Array.isArray(skills)
-        ? skills.map((s) => s.trim()).filter(Boolean)
-        : skills
+        ? skills.map((s) => String(s).trim()).filter(Boolean)
+        : String(skills)
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean);
     }
-    if (linkedinUrl !== undefined) user.linkedinUrl = linkedinUrl.trim();
-    if (githubUrl !== undefined) user.githubUrl = githubUrl.trim();
-    if (portfolioUrl !== undefined) user.portfolioUrl = portfolioUrl.trim();
-    if (profilePicture !== undefined) user.profilePicture = profilePicture;
+    
+    user.linkedinUrl = linkedinUrl ? linkedinUrl.trim() : "";
+    user.githubUrl = githubUrl ? githubUrl.trim() : "";
+    user.portfolioUrl = portfolioUrl ? portfolioUrl.trim() : "";
+    user.profilePicture = profilePicture || "";
 
+    // Recompute profile completion based on actual saved fields
     user.profileCompletion = computeProfileCompletion(user);
-    await user.save();
+    
+    // Save and return full updated user
+    const savedUser = await user.save();
 
     res.json({
       success: true,
-      user: sanitizeUser(user),
-      missingFields: getMissingFields(user),
+      user: sanitizeUser(savedUser),
+      missingFields: getMissingFields(savedUser),
       message: "Profile updated successfully",
     });
   } catch (error) {
+    console.error("Profile update error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
