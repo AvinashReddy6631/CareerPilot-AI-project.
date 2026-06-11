@@ -28,9 +28,10 @@ export default function EditProfileDrawer({ open, onClose, user, onSave, saving,
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    if (open && user) {
+    if (open && user && !hasInitialized.current) {
       setForm({
         name: user.name || "",
         email: user.email || "",
@@ -46,8 +47,14 @@ export default function EditProfileDrawer({ open, onClose, user, onSave, saving,
         profilePicture: user.profilePicture || "",
       });
       setErrors({});
+      hasInitialized.current = true;
     }
-  }, [open, user]);
+
+    // Reset initialization flag when drawer closes
+    if (!open) {
+      hasInitialized.current = false;
+    }
+  }, [open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
