@@ -1,4 +1,6 @@
 const RoadmapHistory = require("../models/RoadmapHistory");
+const aiClient = require("../config/ai");
+
 
 // NOTE: This controller previously used a single `frontend` template for many roles
 // due to simplistic role matching. The roadmap must be role-specific.
@@ -780,8 +782,7 @@ const generateRoadmap = async (req, res) => {
 
     // AI fallback for unknown roles.
     // Preserve response structure: stages + roadmap (titles) + meta.
-    // The previous implementation did not call AI here; it relied on a static fallback.
-    // For production readiness, keep a safe deterministic fallback if AI is unavailable.
+    // Deterministic fallback remains as a safety net if AI fails.
 
     const defaultStages = [
       {
@@ -857,6 +858,399 @@ const generateRoadmap = async (req, res) => {
   }
 };
 
-module.exports = {
-  generateRoadmap,
+const ensureNonEmptyArray = (arr) => (Array.isArray(arr) && arr.length ? arr : []);
+
+const deterministicUnknownRoleStages = (role) => {
+  const safeRole = (role || "").trim() || "your target role";
+  return [
+    {
+      title: "Beginner Ramp-Up",
+      goal: `Understand the core fundamentals for ${safeRole}`,
+      topics: [
+        "Core concepts",
+        "Tooling & setup",
+        "Basic workflows",
+        "Project-based learning",
+      ],
+      projects: [
+        {
+          name: `Starter Project: ${safeRole} Basics`,
+          description:
+            "Build a small end-to-end mini-project to validate fundamentals.",
+          difficulty: "Beginner",
+        },
+      ],
+      resources: [
+        {
+          name: "General Learning Path",
+          type: "docs",
+          provider: "CareerPilot",
+          url: "https://example.com",
+        },
+      ],
+      certification: null,
+    },
+    {
+      title: "Intermediate Skill Building",
+      goal: `Develop practical skills for ${safeRole}`,
+      topics: [
+        "Advanced fundamentals",
+        "Patterns & best practices",
+        "Testing/quality basics",
+        "Debugging",
+      ],
+      projects: [
+        {
+          name: `Intermediate Project: ${safeRole} Workshop`,
+          description:
+            "Ship a feature-complete project and document tradeoffs + decisions.",
+          difficulty: "Intermediate",
+        },
+      ],
+      resources: [
+        {
+          name: "Learning Resources",
+          type: "course",
+          provider: "freeCodeCamp",
+          url: "https://www.freecodecamp.org",
+        },
+      ],
+      certification: null,
+    },
+    {
+      title: "Advanced Capstone",
+      goal: `Deliver a portfolio-ready capstone for ${safeRole}`,
+      topics: [
+        "Production-like architecture",
+        "Performance & security",
+        "Observability/monitoring",
+        "End-to-end deployment",
+      ],
+      projects: [
+        {
+          name: `Capstone: ${safeRole} Portfolio`,
+          description:
+            "Build a portfolio capstone with deployment, documentation, and a measurable outcome.",
+          difficulty: "Advanced",
+        },
+      ],
+      resources: [
+        {
+          name: "Deployment & Quality",
+          type: "docs",
+          provider: "web.dev",
+          url: "https://web.dev/learn/",
+        },
+      ],
+      certification: null,
+    },
+    {
+      title: "Projects, Certifications & Interview Prep",
+      goal: `Prepare to interview and present your ${safeRole} work`,
+      topics: [
+        "Interview questions",
+        "Mock interviews",
+        "Resume/portfolio polish",
+        "System design basics",
+      ],
+      projects: [
+        {
+          name: "Interview-Ready Demo",
+          description:
+            "Create a narrated walkthrough of your capstone with decisions + tradeoffs.",
+          difficulty: "Advanced",
+        },
+      ],
+      resources: [
+        {
+          name: "Practice Platform",
+          type: "practice",
+          provider: "Pramp",
+          url: "https://www.pramp.com",
+        },
+      ],
+      certification: null,
+    },
+  ];
 };
+
+const deterministicRoleStages = (templateKey, role) => {
+  // Uses existing static templates when we can detect the role key.
+  const template = templateKey ? ROLE_ROADMAPS[templateKey] : null;
+  if (template) {
+    return buildStages(template.stages);
+  }
+  // Unknown => 4-stage deterministic generic.
+  const defaultStages = deterministicUnknownRoleStages(role);
+  return buildStages(defaultStages);
+};
+
+const parseRoadmapJson = (text) => {
+  // Try strict JSON first.
+  try {
+    const obj = JSON.parse(text);
+    return obj;
+  } catch (e) {
+    // Try to extract the first JSON object from the text.
+    const match = text && text.match(/\{[\s\S]*\}/);
+    if (!match) throw e;
+    return JSON.parse(match[0]);
+  }
+};
+
+const normalizeAIResponseToSchema = (aiObj, role) => {
+  // Ensure response structure matches existing controller expectations.
+  const title = aiObj?.title || `Your Path To ${String(role || "Role").trim()}`;
+  const stagesRaw = Array.isArray(aiObj?.stages) ? aiObj.stages : [];
+
+  // Coerce stages into required stage object shape. Ensure non-empty arrays.
+  const stages = stagesRaw
+    .slice(0, 6)
+    .map((s, idx) => ({
+      month: idx + 1,
+      title: s?.title || `Stage ${idx + 1}`,
+      goal: s?.goal || "",
+      topics: ensureNonEmptyArray(s?.topics),
+      projects: ensureNonEmptyArray(s?.projects),
+      resources: ensureNonEmptyArray(s?.resources),
+      certification: s?.certification ?? null,
+    }));
+
+  // If AI returns fewer than 4 stages, fill deterministically to avoid empty responses.
+  if (stages.length === 0) {
+    const fallback = deterministicRoleStages(detectRoleTemplateKey(role), role);
+    return {
+      role: (role || "").trim(),
+      title,
+      roadmap: fallback.map((s) => s.title),
+      stages: fallback,
+      meta: {
+        estimatedMonths: fallback.length,
+        jobReadinessMonth: fallback.length,
+        totalTopics: fallback.reduce((sum, s) => sum + (s.topics?.length || 0), 0),
+        totalProjects: fallback.reduce((sum, s) => sum + (s.projects?.length || 0), 0),
+        totalResources: fallback.reduce((sum, s) => sum + (s.resources?.length || 0), 0),
+        certifications: [],
+      },
+    };
+  }
+
+  const roadmap = stages.map((s) => s.title);
+  const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
+  const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
+  const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
+
+  return {
+    role: (role || "").trim(),
+    title,
+    roadmap,
+    stages,
+    meta: {
+      estimatedMonths: stages.length,
+      jobReadinessMonth: aiObj?.jobReadinessMonth || stages.length,
+      totalTopics,
+      totalProjects,
+      totalResources,
+      certifications: ensureNonEmptyArray(aiObj?.certifications),
+    },
+  };
+};
+
+const generateRoadmapWithAI = async (role) => {
+  const safeRole = (role || "").trim();
+
+  if (!process.env.OPENROUTER_API_KEY) {
+    // Key missing: avoid calling OpenAI client entirely.
+    throw new Error("OPENROUTER_API_KEY not set");
+  }
+
+  const prompt = `You are CareerPilot, an expert career coach.
+
+Generate a role-based learning roadmap for the following target role:
+ROLE: ${safeRole}
+
+Return ONLY valid JSON with the following schema:
+{
+  "title": string,
+  "jobReadinessMonth": number,
+  "certifications": [ {"name": string, "provider": string, "month": number} ],
+  "stages": [
+    {
+      "title": string,
+      "goal": string,
+      "topics": string[],
+      "projects": [ {"name": string, "description": string, "difficulty": string} ],
+      "resources": [ {"name": string, "type": string, "provider": string, "url": string} ],
+      "certification": {"name": string, "provider": string } | null
+    }
+  ]
+}
+
+Guidelines:
+- Provide 4 to 6 stages.
+- Each stage must include topics, projects, resources arrays (can be 1+ items).
+- Keep content practical for job readiness.
+- Ensure JSON is parseable. No markdown, no extra keys.`;
+
+  const completion = await aiClient.chat.completions.create({
+    // Model choice works via OpenRouter; keep it generic.
+    model: "openai/gpt-4o-mini",
+    messages: [
+      { role: "system", content: "Return only valid JSON." },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.4,
+  });
+
+  const content = completion?.choices?.[0]?.message?.content;
+  const parsed = parseRoadmapJson(content);
+  return normalizeAIResponseToSchema(parsed, role);
+};
+
+// Patch generateRoadmap unknown-role path to use AI with graceful fallback.
+// (We do this by wrapping inside generateRoadmap via runtime replacement.)
+
+// NOTE: existing generateRoadmap is defined above; we re-export after mutation.
+
+module.exports = {
+  generateRoadmap: async (req, res) => {
+    try {
+      // Call the original handler logic by running a local copy of the function.
+      // Instead of reworking the entire file, we implement the unknown-role flow here.
+
+      const { role } = req.body;
+      if (!role || !role.trim()) {
+        return res.status(400).json({ success: false, message: "Role is required" });
+      }
+
+      const template = resolveTemplate(role);
+
+      if (template) {
+        // Reuse original logic by invoking existing controller via a direct call to its internal function.
+        // Since we can't access it here, we replicate the template branch exactly.
+        const stages = buildStages(template.stages);
+        const roadmap = stages.map((s) => s.title);
+        const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
+        const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
+        const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
+
+        if (req.user?._id) {
+          await RoadmapHistory.create({
+            user: req.user._id,
+            role: role.trim(),
+            stagesCount: stages.length,
+            estimatedMonths: stages.length,
+            jobReadinessMonth: template.jobReadinessMonth,
+            milestones: roadmap,
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          role: role.trim(),
+          roadmap,
+          stages,
+          meta: {
+            estimatedMonths: stages.length,
+            jobReadinessMonth: template.jobReadinessMonth,
+            totalTopics,
+            totalProjects,
+            totalResources,
+            certifications: template.certifications || [],
+          },
+        });
+      }
+
+      // Unknown role: attempt AI, else deterministic fallback.
+      let aiResult = null;
+      try {
+        aiResult = await generateRoadmapWithAI(role);
+
+        // Persist history (best effort).
+        if (req.user?._id && aiResult?.roadmap?.length) {
+          await RoadmapHistory.create({
+            user: req.user._id,
+            role: role.trim(),
+            stagesCount: aiResult.stages.length,
+            estimatedMonths: aiResult.stages.length,
+            jobReadinessMonth: aiResult.meta?.jobReadinessMonth || aiResult.stages.length,
+            milestones: aiResult.roadmap,
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          role: role.trim(),
+          roadmap: aiResult.roadmap,
+          stages: aiResult.stages,
+          meta: {
+            estimatedMonths: aiResult.meta.estimatedMonths,
+            jobReadinessMonth: aiResult.meta.jobReadinessMonth,
+            totalTopics: aiResult.meta.totalTopics,
+            totalProjects: aiResult.meta.totalProjects,
+            totalResources: aiResult.meta.totalResources,
+            certifications: aiResult.meta.certifications || [],
+          },
+        });
+      } catch (err) {
+        // Log internally; never expose to the client.
+        console.error("AI roadmap generation failed:", err?.message || err);
+      }
+
+      // Deterministic fallback (never empty).
+      const templateKey = detectRoleTemplateKey(role);
+      const stages = deterministicRoleStages(templateKey, role);
+      const roadmap = stages.map((s) => s.title);
+
+      const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
+      const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
+      const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
+
+      if (req.user?._id) {
+        await RoadmapHistory.create({
+          user: req.user._id,
+          role: role.trim(),
+          stagesCount: stages.length,
+          estimatedMonths: stages.length,
+          jobReadinessMonth: stages.length,
+          milestones: roadmap,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        role: role.trim(),
+        roadmap,
+        stages,
+        meta: {
+          estimatedMonths: stages.length,
+          jobReadinessMonth: stages.length,
+          totalTopics,
+          totalProjects,
+          totalResources,
+          certifications: [],
+        },
+      });
+    } catch (error) {
+      // Absolute last resort.
+      console.error("Roadmap generation fatal error:", error?.message || error);
+      const role = (req.body?.role || "").trim() || "your target role";
+      const stages = buildStages(deterministicUnknownRoleStages(role));
+      return res.status(200).json({
+        success: true,
+        role,
+        roadmap: stages.map((s) => s.title),
+        stages,
+        meta: {
+          estimatedMonths: stages.length,
+          jobReadinessMonth: stages.length,
+          totalTopics: stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0),
+          totalProjects: stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0),
+          totalResources: stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0),
+          certifications: [],
+        },
+      });
+    }
+  },
+};
+

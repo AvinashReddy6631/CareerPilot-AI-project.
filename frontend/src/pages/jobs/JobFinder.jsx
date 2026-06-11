@@ -123,6 +123,7 @@ export default function JobFinder() {
   };
 
   const handleTrack = async (job) => {
+    // backend/applicationController dedupes using `job.jobId`
     await trackApplication(
       {
         jobId: job.id,

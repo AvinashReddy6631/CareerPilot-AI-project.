@@ -64,12 +64,66 @@ function computeConfidenceScore(text, speechConfidence = 0) {
 }
 
 function speakText(text) {
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-IN";
-  utterance.rate = 0.95;
-  window.speechSynthesis.speak(utterance);
+  try {
+    if (!text || !text.toString().trim()) return;
+
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+      console.warn("SpeechSynthesis API not available");
+      return;
+    }
+
+    // Stop anything currently speaking, so replay always works.
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-IN";
+    utterance.rate = 0.95;
+
+    const pickVoice = () => {
+      const voices = window.speechSynthesis.getVoices() || [];
+      // Prefer en-IN, but fall back to default.
+      const voice =
+        voices.find((v) => (v.lang || "").toLowerCase().startsWith("en-in")) ||
+        voices.find((v) => (v.lang || "").toLowerCase().startsWith("en")) ||
+        voices[0];
+
+      if (voice) utterance.voice = voice;
+      return voices.length;
+    };
+
+    const voiceCount = pickVoice();
+
+    // If voices are not loaded yet (common on first call), retry shortly.
+    if (voiceCount === 0) {
+      console.warn("No voices available yet. Retrying speak...");
+
+      // Avoid losing the user-initiated click; schedule a retry.
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.cancel();
+          pickVoice();
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.error("Speech retry failed:", e);
+        }
+      }, 250);
+    } else {
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // Debug logging for production issues.
+    utterance.onerror = (e) => {
+      console.error("SpeechSynthesis utterance error:", e);
+    };
+
+    utterance.onend = () => {
+      // no-op; helps ensure no silent failures during debugging
+    };
+  } catch (e) {
+    console.error("speakText failed:", e);
+  }
 }
+
 
 const fade = {
   initial: { opacity: 0, y: 12 },

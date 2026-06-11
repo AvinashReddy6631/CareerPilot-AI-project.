@@ -1,5 +1,6 @@
 const express = require("express");
-const { optionalAuth } = require("../middleware/optionalAuthMiddleware");
+const { protect } = require("../middleware/authMiddleware");
+
 
 const {
   saveInterview,
@@ -12,9 +13,10 @@ const router = express.Router();
 
 router.post(
   "/save",
-  optionalAuth,
+  protect,
   saveInterview
 );
+
 
 router.get(
   "/analytics",

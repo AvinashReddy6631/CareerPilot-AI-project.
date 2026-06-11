@@ -7,6 +7,13 @@ const saveInterview = async (
   res
 ) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Not Authorized",
+      });
+    }
+
     const {
       role,
       averageScore,
@@ -23,6 +30,7 @@ const saveInterview = async (
     const interview =
       await InterviewHistory.create({
         user: req.user?._id || undefined,
+
         role,
         averageScore,
         strengths,
