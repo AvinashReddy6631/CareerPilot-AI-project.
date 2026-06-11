@@ -105,15 +105,9 @@ app.use(
     ],
   })
 );
-// Handle preflight requests
-app.options("*", cors());
 // Request body size limits
 app.use(
   express.json({
-    limit: "10mb",
-  })
-);
-
 app.use(
   express.urlencoded({
     extended: true,
