@@ -13,15 +13,8 @@ const isValidEmail = (email) => {
 // Password validation - requires minimum complexity
 const isValidPassword = (password) => {
   if (!password || typeof password !== "string") return false;
-  if (password.length < 8) return false;
-  if (password.length > 128) return false;
-  // Check for at least one uppercase, one lowercase, one number
-  const hasUpperCase = /[A-Z]/.test(password);
-  const hasLowerCase = /[a-z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  return hasUpperCase && hasLowerCase && hasNumber;
+  return password.length >= 8;
 };
-
 // URL validation for links
 const isValidUrl = (urlString) => {
   if (!urlString || typeof urlString !== "string") return false;
