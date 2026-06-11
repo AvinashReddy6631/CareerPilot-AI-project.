@@ -76,7 +76,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests without origin (Postman, mobile apps, server-to-server)
       if (!origin) {
         return callback(null, true);
       }
@@ -106,7 +105,6 @@ app.use(
     ],
   })
 );
-
 // Handle preflight requests
 app.options("*", cors());
 // Request body size limits
