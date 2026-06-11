@@ -69,24 +69,46 @@ app.use(
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
+  "https://careerpilot-pro.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      // Allow requests without origin (Postman, mobile apps, server-to-server)
+      if (!origin) {
+        return callback(null, true);
       }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("Blocked CORS Origin:", origin);
+
+      return callback(
+        new Error(`CORS blocked for origin: ${origin}`)
+      );
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
   })
 );
 
+// Handle preflight requests
+app.options("*", cors());
 // Request body size limits
 app.use(
   express.json({
