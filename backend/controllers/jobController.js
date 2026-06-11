@@ -14,17 +14,31 @@ const search = async (req, res) => {
       resumeText = "",
     } = req.body?.query !== undefined ? req.body : req.query;
 
+    // Sanitize and validate inputs
+    const sanitize = (str) => {
+      return String(str).slice(0, 500).trim();
+    };
+
+    const sanitizedQuery = sanitize(query);
+    const sanitizedLocation = sanitize(location);
+    const sanitizedType = sanitize(type);
+    const pageNum = Math.max(1, Math.min(Number(page) || 1, 1000));
+    const limitNum = Math.max(1, Math.min(Number(limit) || 20, 100));
+
     const sourceList = sources
-      ? (Array.isArray(sources) ? sources : sources.split(",")).filter(Boolean)
+      ? (Array.isArray(sources) ? sources : String(sources).split(","))
+          .map((s) => String(s).trim())
+          .filter(Boolean)
+          .slice(0, 20)
       : [];
 
     const result = searchJobs({
-      query,
-      location,
-      type,
+      query: sanitizedQuery,
+      location: sanitizedLocation,
+      type: sanitizedType,
       sources: sourceList,
-      page: Number(page),
-      limit: Number(limit),
+      page: pageNum,
+      limit: limitNum,
     });
 
     if (resumeText?.trim()) {
@@ -37,8 +51,7 @@ const search = async (req, res) => {
 
     res.json({ success: true, ...result, availableSources: SOURCES });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Search failed" });
   }
 };
 
@@ -46,23 +59,26 @@ const matchJob = async (req, res) => {
   try {
     const { jobId, resumeText } = req.body;
 
-    if (!jobId || !resumeText?.trim()) {
+    // Validate inputs
+    const sanitizedJobId = String(jobId || "").trim().slice(0, 100);
+    const sanitizedResumeText = String(resumeText || "").trim().slice(0, 50000);
+
+    if (!sanitizedJobId || !sanitizedResumeText) {
       return res.status(400).json({
         success: false,
         message: "jobId and resumeText are required",
       });
     }
 
-    const job = getJobById(jobId);
+    const job = getJobById(sanitizedJobId);
     if (!job) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
 
-    const match = computeMatchScore(resumeText, job);
+    const match = computeMatchScore(sanitizedResumeText, job);
     res.json({ success: true, job: { ...job, ...match } });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Job matching failed" });
   }
 };
 
@@ -106,6 +122,7 @@ const saveJob = async (req, res) => {
 const getSavedJobs = async (req, res) => {
   try {
     const { clientId } = req.query;
+    const userId = req.user._id;
 
     if (!clientId) {
       return res.status(400).json({
@@ -114,10 +131,17 @@ const getSavedJobs = async (req, res) => {
       });
     }
 
+    // Verify ownership
+    if (clientId !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to access these saved jobs",
+      });
+    }
+
     const saved = await SavedJob.find({ clientId }).sort({ createdAt: -1 });
     res.json({ success: true, savedJobs: saved });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -126,11 +150,34 @@ const removeSavedJob = async (req, res) => {
   try {
     const { clientId } = req.query;
     const { id } = req.params;
+    const userId = req.user._id;
 
-    await SavedJob.findOneAndDelete({ _id: id, clientId });
+    if (!clientId) {
+      return res.status(400).json({
+        success: false,
+        message: "clientId is required",
+      });
+    }
+
+    // Verify ownership
+    if (clientId !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this saved job",
+      });
+    }
+
+    const deleted = await SavedJob.findOneAndDelete({ _id: id, clientId });
+    
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Saved job not found",
+      });
+    }
+
     res.json({ success: true });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

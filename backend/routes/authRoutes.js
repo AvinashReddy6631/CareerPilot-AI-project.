@@ -12,13 +12,22 @@ const {
   "../controllers/authController"
 );
 
+const {
+  loginLimiter,
+  registrationLimiter,
+} = require(
+  "../middleware/rateLimitMiddleware"
+);
+
 router.post(
   "/register",
+  registrationLimiter,
   registerUser
 );
 
 router.post(
   "/login",
+  loginLimiter,
   loginUser
 );
 
