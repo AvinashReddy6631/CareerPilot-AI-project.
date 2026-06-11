@@ -14,6 +14,7 @@ const jobRoutes = require("./routes/jobRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 
+
 const {
 notFound,
 errorHandler,
