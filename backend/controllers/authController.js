@@ -5,6 +5,11 @@ const generateToken = require(
   "../utils/generateToken"
 );
 
+const {
+  validateRegistration,
+  validateLogin,
+} = require("../utils/validators");
+
 const registerUser = async (
   req,
   res
@@ -16,39 +21,48 @@ const registerUser = async (
       password,
     } = req.body;
 
-    if (
-      !name ||
-      !email ||
-      !password
-    ) {
+    // Validate input
+    const validation =
+      validateRegistration({
+        name,
+        email,
+        password,
+      });
+
+    if (!validation.isValid) {
       return res.status(400).json({
-        message:
-          "All fields required",
+        success: false,
+        message: "Validation failed",
+        errors: validation.errors,
       });
     }
 
+    // Check if user exists
     const exists =
       await User.findOne({
-        email,
+        email: email.toLowerCase(),
       });
 
     if (exists) {
       return res.status(400).json({
+        success: false,
         message:
-          "User already exists",
+          "Email already registered",
       });
     }
 
+    // Hash password with 12 salt rounds (increased from 10)
     const hashedPassword =
       await bcrypt.hash(
         password,
-        10
+        12
       );
 
     const user =
       await User.create({
-        name,
-        email,
+        name: name.trim(),
+        email:
+          email.toLowerCase().trim(),
         password:
           hashedPassword,
       });
@@ -69,8 +83,9 @@ const registerUser = async (
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
       message:
-        error.message,
+        "Registration failed",
     });
   }
 };
@@ -85,9 +100,25 @@ const loginUser = async (
       password,
     } = req.body;
 
+    // Validate input
+    const validation =
+      validateLogin({
+        email,
+        password,
+      });
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: validation.errors,
+      });
+    }
+
     const user =
       await User.findOne({
-        email,
+        email:
+          email.toLowerCase(),
       });
 
     if (
@@ -113,15 +144,18 @@ const loginUser = async (
         },
       });
     } else {
+      // Don't reveal if email exists
       res.status(401).json({
+        success: false,
         message:
-          "Invalid Credentials",
+          "Invalid email or password",
       });
     }
   } catch (error) {
     res.status(500).json({
+      success: false,
       message:
-        error.message,
+        "Login failed",
     });
   }
 };

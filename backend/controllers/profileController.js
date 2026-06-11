@@ -9,6 +9,9 @@ const {
   getMissingFields,
   sanitizeUser,
 } = require("../utils/profileCompletion");
+const {
+  validateProfileUpdate,
+} = require("../utils/validators");
 
 const getProfile = async (req, res) => {
   try {
@@ -40,49 +43,81 @@ const updateProfile = async (req, res) => {
       profilePicture,
     } = req.body;
 
-    if (!name?.trim()) {
+    // Validate profile data
+    const validation =
+      validateProfileUpdate({
+        name,
+        phone,
+        linkedinUrl,
+        githubUrl,
+        portfolioUrl,
+      });
+
+    if (!validation.isValid) {
       return res.status(400).json({
         success: false,
-        message: "Full name is required",
+        message: "Validation failed",
+        errors: validation.errors,
       });
     }
 
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    user.name = name.trim();
-    if (phone !== undefined) user.phone = phone.trim();
-    if (college !== undefined) user.college = college.trim();
-    if (degree !== undefined) user.degree = degree.trim();
-    if (branch !== undefined) user.branch = branch.trim();
-    if (graduationYear !== undefined) user.graduationYear = String(graduationYear).trim();
-    if (targetRole !== undefined) user.targetRole = targetRole.trim();
+    if (name !== undefined) user.name = name.trim();
+    if (phone !== undefined) user.phone = phone?.trim() || "";
+    if (college !== undefined) user.college = college?.trim() || "";
+    if (degree !== undefined) user.degree = degree?.trim() || "";
+    if (branch !== undefined) user.branch = branch?.trim() || "";
+    if (graduationYear !== undefined)
+      user.graduationYear = String(
+        graduationYear
+      )
+        .trim();
+    if (targetRole !== undefined)
+      user.targetRole = targetRole?.trim() || "";
     if (skills !== undefined) {
       user.skills = Array.isArray(skills)
-        ? skills.map((s) => s.trim()).filter(Boolean)
-        : skills
+        ? skills
+            .map((s) => String(s).trim())
+            .filter(Boolean)
+            .slice(0, 50)
+        : String(skills)
             .split(",")
             .map((s) => s.trim())
-            .filter(Boolean);
+            .filter(Boolean)
+            .slice(0, 50);
     }
-    if (linkedinUrl !== undefined) user.linkedinUrl = linkedinUrl.trim();
-    if (githubUrl !== undefined) user.githubUrl = githubUrl.trim();
-    if (portfolioUrl !== undefined) user.portfolioUrl = portfolioUrl.trim();
-    if (profilePicture !== undefined) user.profilePicture = profilePicture;
+    if (linkedinUrl !== undefined)
+      user.linkedinUrl = linkedinUrl?.trim() || "";
+    if (githubUrl !== undefined)
+      user.githubUrl = githubUrl?.trim() || "";
+    if (portfolioUrl !== undefined)
+      user.portfolioUrl = portfolioUrl?.trim() || "";
+    if (profilePicture !== undefined)
+      user.profilePicture = profilePicture;
 
-    user.profileCompletion = computeProfileCompletion(user);
+    user.profileCompletion =
+      computeProfileCompletion(user);
     await user.save();
 
     res.json({
       success: true,
       user: sanitizeUser(user),
       missingFields: getMissingFields(user),
-      message: "Profile updated successfully",
+      message:
+        "Profile updated successfully",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Profile update failed",
+    });
   }
 };
 
