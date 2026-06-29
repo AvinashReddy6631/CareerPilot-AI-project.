@@ -20,6 +20,7 @@ router.post(
 
 router.get(
   "/analytics",
+  protect,
   getAnalytics
 );
 

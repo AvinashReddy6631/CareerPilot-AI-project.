@@ -1,4 +1,5 @@
 const express = require("express");
+const { protect } = require("../middleware/authMiddleware");
 
 const {
   generateQuestions,
@@ -7,6 +8,8 @@ const {
 } = require("../controllers/interviewController");
 
 const router = express.Router();
+
+router.use(protect);
 
 router.post(
   "/generate-questions",

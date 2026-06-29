@@ -38,19 +38,26 @@ const protect = async (
           "-password"
         );
 
-      next();
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "User not found, Not Authorized",
+        });
+      }
+
+      return next();
     } catch (error) {
-      res.status(401).json({
-        message:
-          "Not Authorized",
+      return res.status(401).json({
+        success: false,
+        message: "Not Authorized",
       });
     }
   }
 
   if (!token) {
-    res.status(401).json({
-      message:
-        "No Token",
+    return res.status(401).json({
+      success: false,
+      message: "No Token",
     });
   }
 };

@@ -1,4 +1,5 @@
 const express = require("express");
+const { protect } = require("../middleware/authMiddleware");
 const {
   search,
   matchJob,
@@ -12,8 +13,8 @@ const router = express.Router();
 router.get("/search", search);
 router.post("/search", search);
 router.post("/match", matchJob);
-router.post("/saved", saveJob);
-router.get("/saved", getSavedJobs);
-router.delete("/saved/:id", removeSavedJob);
+router.post("/saved", protect, saveJob);
+router.get("/saved", protect, getSavedJobs);
+router.delete("/saved/:id", protect, removeSavedJob);
 
 module.exports = router;

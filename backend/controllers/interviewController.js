@@ -157,6 +157,7 @@ Return ONLY the question text, nothing else.
     }
 
     await Interview.create({
+      user: req.user.id,
       role,
       score: Number(feedbackData.score || 0),
     });

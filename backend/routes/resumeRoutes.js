@@ -7,8 +7,8 @@ const upload = require(
   "../middleware/uploadMiddleware"
 );
 
-const { optionalAuth } = require(
-  "../middleware/optionalAuthMiddleware"
+const { protect } = require(
+  "../middleware/authMiddleware"
 );
 
 const {
@@ -19,7 +19,7 @@ const {
 
 router.post(
   "/upload",
-  optionalAuth,
+  protect,
   (req, res, next) => {
     upload.single("resume")(req, res, (err) => {
       if (err) {

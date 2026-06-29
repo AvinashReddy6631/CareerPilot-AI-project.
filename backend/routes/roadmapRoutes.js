@@ -1,5 +1,5 @@
 const express = require("express");
-const { optionalAuth } = require("../middleware/optionalAuthMiddleware");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -9,7 +9,7 @@ const {
 
 router.post(
   "/generate",
-  optionalAuth,
+  protect,
   generateRoadmap
 );
 

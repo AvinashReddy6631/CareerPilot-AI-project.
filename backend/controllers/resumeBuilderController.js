@@ -34,7 +34,7 @@ const createResume = async (req, res) => {
     } = req.body;
 
     const resume = await ResumeBuilder.create({
-      user: req.user?._id || undefined,
+      user: req.user.id,
       name,
       email,
       phone,
@@ -125,7 +125,7 @@ Return ONLY the summary text, no quotes or labels.`,
 
 const getHistory = async (req, res) => {
   try {
-    const resumes = await ResumeBuilder.find()
+    const resumes = await ResumeBuilder.find({ user: req.user.id })
       .sort({ createdAt: -1 })
       .limit(20)
       .select(
@@ -143,7 +143,7 @@ const getHistory = async (req, res) => {
 
 const getResumeById = async (req, res) => {
   try {
-    const resume = await ResumeBuilder.findById(req.params.id);
+    const resume = await ResumeBuilder.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!resume) {
       return res.status(404).json({

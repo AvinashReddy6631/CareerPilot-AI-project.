@@ -1,5 +1,5 @@
 const express = require("express");
-const { optionalAuth } = require("../middleware/optionalAuthMiddleware");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -10,7 +10,9 @@ const {
   getResumeById,
 } = require("../controllers/resumeBuilderController");
 
-router.post("/create", optionalAuth, createResume);
+router.use(protect);
+
+router.post("/create", createResume);
 router.post("/generate-summary", generateSummary);
 router.get("/history", getHistory);
 router.get("/:id", getResumeById);

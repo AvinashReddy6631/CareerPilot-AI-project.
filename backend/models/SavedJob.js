@@ -2,7 +2,13 @@ const mongoose = require("mongoose");
 
 const savedJobSchema = new mongoose.Schema(
   {
-    clientId: { type: String, required: true, index: true },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    clientId: { type: String, default: "" },
     jobId: { type: String, required: true },
     source: String,
     company: String,
@@ -18,6 +24,6 @@ const savedJobSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-savedJobSchema.index({ clientId: 1, jobId: 1 }, { unique: true });
+savedJobSchema.index({ user: 1, jobId: 1 }, { unique: true });
 
 module.exports = mongoose.model("SavedJob", savedJobSchema);

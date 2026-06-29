@@ -3,16 +3,7 @@ const { STATUSES } = require("../models/JobApplication");
 
 const getApplications = async (req, res) => {
   try {
-    const { clientId } = req.query;
-
-    if (!clientId) {
-      return res.status(400).json({
-        success: false,
-        message: "clientId is required",
-      });
-    }
-
-    const applications = await JobApplication.find({ clientId }).sort({
+    const applications = await JobApplication.find({ user: req.user.id }).sort({
       updatedAt: -1,
     });
 
@@ -30,17 +21,17 @@ const getApplications = async (req, res) => {
 
 const createApplication = async (req, res) => {
   try {
-    const { clientId, job, status = "applied", notes = "" } = req.body;
+    const { job, status = "applied", notes = "" } = req.body;
 
-    if (!clientId || !job?.company || !job?.role) {
+    if (!job?.company || !job?.role) {
       return res.status(400).json({
         success: false,
-        message: "clientId, company, and role are required",
+        message: "company and role are required",
       });
     }
 
     const existing = job.jobId
-      ? await JobApplication.findOne({ clientId, jobId: job.jobId })
+      ? await JobApplication.findOne({ user: req.user.id, jobId: job.jobId })
       : null;
 
     if (existing) {
@@ -48,7 +39,7 @@ const createApplication = async (req, res) => {
     }
 
     const application = await JobApplication.create({
-      clientId,
+      user: req.user.id,
       jobId: job.jobId || "",
       company: job.company,
       role: job.role,
@@ -71,7 +62,6 @@ const createApplication = async (req, res) => {
 
 const updateApplication = async (req, res) => {
   try {
-    const { clientId } = req.query;
     const { id } = req.params;
     const { status, notes } = req.body;
 
@@ -80,7 +70,7 @@ const updateApplication = async (req, res) => {
     if (notes !== undefined) update.notes = notes;
 
     const application = await JobApplication.findOneAndUpdate(
-      { _id: id, clientId },
+      { _id: id, user: req.user.id },
       update,
       { new: true }
     );
@@ -101,10 +91,17 @@ const updateApplication = async (req, res) => {
 
 const deleteApplication = async (req, res) => {
   try {
-    const { clientId } = req.query;
     const { id } = req.params;
 
-    await JobApplication.findOneAndDelete({ _id: id, clientId });
+    const application = await JobApplication.findOneAndDelete({ _id: id, user: req.user.id });
+    
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.log(error);

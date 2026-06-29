@@ -68,19 +68,19 @@ const matchJob = async (req, res) => {
 
 const saveJob = async (req, res) => {
   try {
-    const { clientId, job } = req.body;
+    const { job } = req.body;
 
-    if (!clientId || !job?.jobId) {
+    if (!job?.jobId) {
       return res.status(400).json({
         success: false,
-        message: "clientId and job details are required",
+        message: "Job details with jobId are required",
       });
     }
 
     const saved = await SavedJob.findOneAndUpdate(
-      { clientId, jobId: job.jobId },
+      { user: req.user.id, jobId: job.jobId },
       {
-        clientId,
+        user: req.user.id,
         jobId: job.jobId,
         source: job.source,
         company: job.company,
@@ -105,16 +105,7 @@ const saveJob = async (req, res) => {
 
 const getSavedJobs = async (req, res) => {
   try {
-    const { clientId } = req.query;
-
-    if (!clientId) {
-      return res.status(400).json({
-        success: false,
-        message: "clientId is required",
-      });
-    }
-
-    const saved = await SavedJob.find({ clientId }).sort({ createdAt: -1 });
+    const saved = await SavedJob.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json({ success: true, savedJobs: saved });
   } catch (error) {
     console.log(error);
@@ -124,10 +115,9 @@ const getSavedJobs = async (req, res) => {
 
 const removeSavedJob = async (req, res) => {
   try {
-    const { clientId } = req.query;
     const { id } = req.params;
 
-    await SavedJob.findOneAndDelete({ _id: id, clientId });
+    await SavedJob.findOneAndDelete({ _id: id, user: req.user.id });
     res.json({ success: true });
   } catch (error) {
     console.log(error);

@@ -1,4 +1,5 @@
 const express = require("express");
+const { protect } = require("../middleware/authMiddleware");
 const {
   getApplications,
   createApplication,
@@ -7,6 +8,8 @@ const {
 } = require("../controllers/applicationController");
 
 const router = express.Router();
+
+router.use(protect);
 
 router.get("/", getApplications);
 router.post("/", createApplication);

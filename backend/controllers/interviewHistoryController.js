@@ -7,13 +7,6 @@ const saveInterview = async (
   res
 ) => {
   try {
-    if (!req.user?._id) {
-      return res.status(401).json({
-        success: false,
-        message: "Not Authorized",
-      });
-    }
-
     const {
       role,
       averageScore,
@@ -29,7 +22,7 @@ const saveInterview = async (
 
     const interview =
       await InterviewHistory.create({
-        user: req.user?._id || undefined,
+        user: req.user.id,
 
         role,
         averageScore,
@@ -67,7 +60,7 @@ const getAnalytics = async (
 ) => {
   try {
     const interviews =
-      await InterviewHistory.find();
+      await InterviewHistory.find({ user: req.user.id });
 
     const totalInterviews =
       interviews.length;

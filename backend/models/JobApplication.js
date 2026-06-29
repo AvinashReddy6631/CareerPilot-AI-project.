@@ -4,7 +4,13 @@ const STATUSES = ["saved", "applied", "screening", "interview", "offer", "reject
 
 const jobApplicationSchema = new mongoose.Schema(
   {
-    clientId: { type: String, required: true, index: true },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    clientId: { type: String, default: "" },
     jobId: { type: String, default: "" },
     company: { type: String, required: true },
     role: { type: String, required: true },

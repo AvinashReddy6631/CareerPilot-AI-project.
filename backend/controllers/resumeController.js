@@ -39,7 +39,7 @@ const analyzeResume = async (req, res) => {
     const analysis = analyzeAts(resumeText, jobDescription);
 
     const resume = await Resume.create({
-      user: req.user?._id || undefined,
+      user: req.user.id,
       fileName: req.file.originalname,
       resumeText: resumeText.toLowerCase(),
       atsScore: analysis.atsScore,

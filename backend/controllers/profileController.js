@@ -115,11 +115,8 @@ const getProfileStats = async (req, res) => {
       ? Math.min(100, Math.round((latestRoadmap.stagesCount / (latestRoadmap.estimatedMonths || 1)) * 10))
       : 0;
 
-    let applicationsSent = 0;
-    if (clientId) {
-      const apps = await JobApplication.find({ clientId });
-      applicationsSent = apps.filter((a) => a.status !== "saved").length;
-    }
+    const apps = await JobApplication.find({ user: userId });
+    const applicationsSent = apps.filter((a) => a.status !== "saved").length;
 
     const resumesBuilt = await ResumeBuilder.countDocuments({ user: userId });
 

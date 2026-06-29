@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
 
 const {
   getAnalytics,
@@ -7,6 +8,7 @@ const {
 
 router.get(
   "/analytics",
+  protect,
   getAnalytics
 );
 
