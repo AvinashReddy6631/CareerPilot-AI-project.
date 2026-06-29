@@ -8,17 +8,18 @@ export async function exportResumePdf(element, fileName = "Resume") {
     }
 
     const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: "#ffffff",
-      logging: true,
-      scrollX: 0,
-      scrollY: -window.scrollY,
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight,
-    });
-
+  scale: 2,
+  useCORS: true,
+  allowTaint: true,
+  backgroundColor: "#ffffff",
+  logging: false,
+  scrollX: 0,
+  scrollY: -window.scrollY,
+  windowWidth: element.scrollWidth,
+  windowHeight: element.scrollHeight,
+  foreignObjectRendering: false,
+  removeContainer: true,
+});
     const imgData = canvas.toDataURL("image/png");
 
     const pdf = new jsPDF({
