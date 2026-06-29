@@ -732,132 +732,6 @@ const resolveTemplate = (role) => {
   return key ? ROLE_ROADMAPS[key] : null;
 };
 
-const generateRoadmap = async (req, res) => {
-  try {
-    const { role } = req.body;
-
-    if (!role || !role.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Role is required",
-      });
-    }
-
-    const template = resolveTemplate(role);
-
-    // If role matches our predefined templates, return it immediately.
-    if (template) {
-      const stages = buildStages(template.stages);
-      const roadmap = stages.map((s) => s.title);
-      const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
-      const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
-      const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
-
-      if (req.user?._id) {
-        await RoadmapHistory.create({
-          user: req.user._id,
-          role: role.trim(),
-          stagesCount: stages.length,
-          estimatedMonths: stages.length,
-          jobReadinessMonth: template.jobReadinessMonth,
-          milestones: roadmap,
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        role: role.trim(),
-        roadmap,
-        stages,
-        meta: {
-          estimatedMonths: stages.length,
-          jobReadinessMonth: template.jobReadinessMonth,
-          totalTopics,
-          totalProjects,
-          totalResources,
-          certifications: template.certifications || [],
-        },
-      });
-    }
-
-    // AI fallback for unknown roles.
-    // Preserve response structure: stages + roadmap (titles) + meta.
-    // Deterministic fallback remains as a safety net if AI fails.
-
-    const defaultStages = [
-      {
-        title: "Role Understanding",
-        goal: "Clarify target skills, job requirements, and success metrics",
-        topics: ["Role research", "Skill mapping", "Portfolio strategy", "Goal setting"],
-        projects: [{ name: "Career Plan Outline", description: "Write a role-specific plan and requirements list.", difficulty: "Beginner" }],
-        resources: [{ name: "General Roadmapping", type: "docs", provider: "CareerPilot", url: "https://example.com" }],
-        certification: null,
-      },
-      {
-        title: "Core Fundamentals",
-        goal: "Build the fundamentals needed for the chosen role",
-        topics: ["Programming basics", "Data fundamentals", "Practical tooling", "Debugging"],
-        projects: [{ name: "Fundamentals Practice", description: "Small projects to validate fundamentals.", difficulty: "Intermediate" }],
-        resources: [{ name: "freeCodeCamp", type: "course", provider: "freeCodeCamp", url: "https://www.freecodecamp.org" }],
-        certification: null,
-      },
-      {
-        title: "Build Role Projects",
-        goal: "Create a portfolio aligned with real-world job tasks",
-        topics: ["APIs", "Databases", "Testing", "Deployment"],
-        projects: [{ name: "Role Portfolio Project", description: "Ship one measurable project aligned to role responsibilities.", difficulty: "Advanced" }],
-        resources: [{ name: "MDN", type: "docs", provider: "MDN", url: "https://developer.mozilla.org/" }],
-        certification: null,
-      },
-      {
-        title: "Certification & Interview Prep",
-        goal: "Complete certifications and prepare for interviews",
-        topics: ["Interview patterns", "Resume updates", "Mock interviews", "System design basics"],
-        projects: [{ name: "Interview Ready Demo", description: "A narrated demo of your project with tradeoffs.", difficulty: "Advanced" }],
-        resources: [{ name: "Pramp", type: "practice", provider: "Pramp", url: "https://www.pramp.com" }],
-        certification: null,
-      },
-    ];
-
-    const stages = buildStages(defaultStages);
-    const roadmap = stages.map((s) => s.title);
-    const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
-    const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
-    const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
-
-    if (req.user?._id) {
-      await RoadmapHistory.create({
-        user: req.user._id,
-        role: role.trim(),
-        stagesCount: stages.length,
-        estimatedMonths: stages.length,
-        jobReadinessMonth: stages.length,
-        milestones: roadmap,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      role: role.trim(),
-      roadmap,
-      stages,
-      meta: {
-        estimatedMonths: stages.length,
-        jobReadinessMonth: stages.length,
-        totalTopics,
-        totalProjects,
-        totalResources,
-        certifications: [],
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
 const ensureNonEmptyArray = (arr) => (Array.isArray(arr) && arr.length ? arr : []);
 
 const deterministicUnknownRoleStages = (role) => {
@@ -1107,148 +981,227 @@ Guidelines:
   return normalizeAIResponseToSchema(parsed, role);
 };
 
-// Patch generateRoadmap unknown-role path to use AI with graceful fallback.
-// (We do this by wrapping inside generateRoadmap via runtime replacement.)
+const buildResultFromStages = ({
+  role,
+  stages,
+  jobReadinessMonth,
+  certifications = [],
+}) => {
+  const roadmap = stages.map((s) => s.title);
+  const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
+  const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
+  const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
 
-// NOTE: existing generateRoadmap is defined above; we re-export after mutation.
+  return {
+    success: true,
+    role: role.trim(),
+    roadmap,
+    stages,
+    meta: {
+      estimatedMonths: stages.length,
+      jobReadinessMonth: jobReadinessMonth || stages.length,
+      totalTopics,
+      totalProjects,
+      totalResources,
+      certifications,
+    },
+  };
+};
+
+const buildTemplateResult = (role, template) =>
+  buildResultFromStages({
+    role,
+    stages: buildStages(template.stages),
+    jobReadinessMonth: template.jobReadinessMonth,
+    certifications: template.certifications || [],
+  });
+
+const buildFallbackResult = (role) => {
+  const templateKey = detectRoleTemplateKey(role);
+  return buildResultFromStages({
+    role,
+    stages: deterministicRoleStages(templateKey, role),
+    jobReadinessMonth: undefined,
+    certifications: [],
+  });
+};
+
+const persistRoadmap = async (userId, result) => {
+  return RoadmapHistory.create({
+    user: userId,
+    role: result.role,
+    stagesCount: result.stages.length,
+    estimatedMonths: result.meta?.estimatedMonths || result.stages.length,
+    jobReadinessMonth: result.meta?.jobReadinessMonth || result.stages.length,
+    milestones: result.roadmap,
+    roadmap: result.roadmap,
+    stages: result.stages,
+    meta: result.meta || {},
+  });
+};
+
+const serializeRoadmapHistory = (record) => {
+  if (!record) return null;
+
+  return {
+    _id: record._id,
+    role: record.role,
+    roadmap: record.roadmap?.length ? record.roadmap : record.milestones,
+    stages: record.stages || [],
+    meta: record.meta || {
+      estimatedMonths: record.estimatedMonths,
+      jobReadinessMonth: record.jobReadinessMonth,
+      certifications: [],
+    },
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
+};
+
+const generateRoadmapForRole = async (role) => {
+  const template = resolveTemplate(role);
+  if (template) return buildTemplateResult(role, template);
+
+  try {
+    const aiResult = await generateRoadmapWithAI(role);
+    return {
+      success: true,
+      role: role.trim(),
+      roadmap: aiResult.roadmap,
+      stages: aiResult.stages,
+      meta: {
+        estimatedMonths: aiResult.meta.estimatedMonths,
+        jobReadinessMonth: aiResult.meta.jobReadinessMonth,
+        totalTopics: aiResult.meta.totalTopics,
+        totalProjects: aiResult.meta.totalProjects,
+        totalResources: aiResult.meta.totalResources,
+        certifications: aiResult.meta.certifications || [],
+      },
+    };
+  } catch (err) {
+    console.error("AI roadmap generation failed:", err?.message || err);
+    return buildFallbackResult(role);
+  }
+};
 
 module.exports = {
   generateRoadmap: async (req, res) => {
     try {
-      // Call the original handler logic by running a local copy of the function.
-      // Instead of reworking the entire file, we implement the unknown-role flow here.
-
       const { role } = req.body;
+      const userId = req.user.id;
+
       if (!role || !role.trim()) {
         return res.status(400).json({ success: false, message: "Role is required" });
       }
 
-      const template = resolveTemplate(role);
-
-      if (template) {
-        // Reuse original logic by invoking existing controller via a direct call to its internal function.
-        // Since we can't access it here, we replicate the template branch exactly.
-        const stages = buildStages(template.stages);
-        const roadmap = stages.map((s) => s.title);
-        const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
-        const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
-        const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
-
-        if (req.user?._id) {
-          await RoadmapHistory.create({
-            user: req.user._id,
-            role: role.trim(),
-            stagesCount: stages.length,
-            estimatedMonths: stages.length,
-            jobReadinessMonth: template.jobReadinessMonth,
-            milestones: roadmap,
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          role: role.trim(),
-          roadmap,
-          stages,
-          meta: {
-            estimatedMonths: stages.length,
-            jobReadinessMonth: template.jobReadinessMonth,
-            totalTopics,
-            totalProjects,
-            totalResources,
-            certifications: template.certifications || [],
-          },
-        });
-      }
-
-      // Unknown role: attempt AI, else deterministic fallback.
-      let aiResult = null;
-      try {
-        aiResult = await generateRoadmapWithAI(role);
-
-        // Persist history (best effort).
-        if (req.user?._id && aiResult?.roadmap?.length) {
-          await RoadmapHistory.create({
-            user: req.user._id,
-            role: role.trim(),
-            stagesCount: aiResult.stages.length,
-            estimatedMonths: aiResult.stages.length,
-            jobReadinessMonth: aiResult.meta?.jobReadinessMonth || aiResult.stages.length,
-            milestones: aiResult.roadmap,
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          role: role.trim(),
-          roadmap: aiResult.roadmap,
-          stages: aiResult.stages,
-          meta: {
-            estimatedMonths: aiResult.meta.estimatedMonths,
-            jobReadinessMonth: aiResult.meta.jobReadinessMonth,
-            totalTopics: aiResult.meta.totalTopics,
-            totalProjects: aiResult.meta.totalProjects,
-            totalResources: aiResult.meta.totalResources,
-            certifications: aiResult.meta.certifications || [],
-          },
-        });
-      } catch (err) {
-        // Log internally; never expose to the client.
-        console.error("AI roadmap generation failed:", err?.message || err);
-      }
-
-      // Deterministic fallback (never empty).
-      const templateKey = detectRoleTemplateKey(role);
-      const stages = deterministicRoleStages(templateKey, role);
-      const roadmap = stages.map((s) => s.title);
-
-      const totalTopics = stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0);
-      const totalProjects = stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0);
-      const totalResources = stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0);
-
-      if (req.user?._id) {
-        await RoadmapHistory.create({
-          user: req.user._id,
-          role: role.trim(),
-          stagesCount: stages.length,
-          estimatedMonths: stages.length,
-          jobReadinessMonth: stages.length,
-          milestones: roadmap,
-        });
-      }
+      const result = await generateRoadmapForRole(role.trim());
+      const saved = await persistRoadmap(userId, result);
 
       return res.status(200).json({
-        success: true,
-        role: role.trim(),
-        roadmap,
-        stages,
-        meta: {
-          estimatedMonths: stages.length,
-          jobReadinessMonth: stages.length,
-          totalTopics,
-          totalProjects,
-          totalResources,
-          certifications: [],
-        },
+        ...result,
+        _id: saved._id,
       });
     } catch (error) {
-      // Absolute last resort.
       console.error("Roadmap generation fatal error:", error?.message || error);
       const role = (req.body?.role || "").trim() || "your target role";
-      const stages = buildStages(deterministicUnknownRoleStages(role));
+      const result = buildResultFromStages({
+        role,
+        stages: buildStages(deterministicUnknownRoleStages(role)),
+      });
+
+      try {
+        const saved = await persistRoadmap(req.user.id, result);
+        return res.status(200).json({ ...result, _id: saved._id });
+      } catch (persistError) {
+        console.error("Roadmap persistence failed:", persistError?.message || persistError);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate roadmap",
+      });
+    }
+  },
+
+  getHistory: async (req, res) => {
+    try {
+      const roadmaps = await RoadmapHistory.find({ user: req.user.id })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(20);
+
       return res.status(200).json({
         success: true,
-        role,
-        roadmap: stages.map((s) => s.title),
-        stages,
-        meta: {
-          estimatedMonths: stages.length,
-          jobReadinessMonth: stages.length,
-          totalTopics: stages.reduce((sum, s) => sum + (s.topics?.length || 0), 0),
-          totalProjects: stages.reduce((sum, s) => sum + (s.projects?.length || 0), 0),
-          totalResources: stages.reduce((sum, s) => sum + (s.resources?.length || 0), 0),
-          certifications: [],
-        },
+        roadmaps: roadmaps.map(serializeRoadmapHistory),
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+
+  getLatestRoadmap: async (req, res) => {
+    try {
+      const roadmap = await RoadmapHistory.findOne({ user: req.user.id })
+        .sort({ updatedAt: -1, createdAt: -1 });
+
+      return res.status(200).json({
+        success: true,
+        roadmap: serializeRoadmapHistory(roadmap),
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+
+  updateRoadmap: async (req, res) => {
+    try {
+      const allowed = {};
+      ["role", "roadmap", "stages", "meta"].forEach((field) => {
+        if (req.body[field] !== undefined) allowed[field] = req.body[field];
+      });
+
+      if (Array.isArray(allowed.roadmap)) {
+        allowed.milestones = allowed.roadmap;
+      }
+
+      if (Array.isArray(allowed.stages)) {
+        allowed.stagesCount = allowed.stages.length;
+      }
+
+      if (allowed.meta) {
+        allowed.estimatedMonths = allowed.meta.estimatedMonths;
+        allowed.jobReadinessMonth = allowed.meta.jobReadinessMonth;
+      }
+
+      const roadmap = await RoadmapHistory.findOneAndUpdate(
+        { _id: req.params.id, user: req.user.id },
+        { $set: allowed },
+        { new: true, runValidators: true }
+      );
+
+      if (!roadmap) {
+        return res.status(404).json({
+          success: false,
+          message: "Roadmap not found",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        roadmap: serializeRoadmapHistory(roadmap),
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        success: false,
+        message: error.message,
       });
     }
   },

@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 const STORAGE_PREFIX = "careerpilot-roadmap-progress";
+const AUTH_USER_KEY = "careerpilot_user";
+const PROGRESS_EVENT = "careerpilot-roadmap-progress-change";
 
 const slugify = (role) =>
   role
@@ -14,29 +16,59 @@ const emptyProgress = () => ({
   stages: {},
 });
 
+const parseProgress = (snapshot) => {
+  if (!snapshot) return emptyProgress();
+
+  try {
+    return JSON.parse(snapshot);
+  } catch (error) {
+    console.error("Failed to parse roadmap progress", error);
+    return emptyProgress();
+  }
+};
+
+const getStoredUserId = () => {
+  try {
+    const stored = localStorage.getItem(AUTH_USER_KEY);
+    if (!stored) return null;
+    const user = JSON.parse(stored);
+    return user?._id || user?.id || null;
+  } catch (error) {
+    console.error("Failed to read roadmap progress user", error);
+    return null;
+  }
+};
+
 export default function useRoadmapProgress(role) {
-  const [progress, setProgress] = useState(emptyProgress);
+  const userId = getStoredUserId();
 
-  const storageKey = role ? `${STORAGE_PREFIX}-${slugify(role)}` : null;
+  const storageKey = role && userId ? `${STORAGE_PREFIX}-${userId}-${slugify(role)}` : null;
 
-  useEffect(() => {
-    if (!storageKey) {
-      setProgress(emptyProgress());
-      return;
-    }
-    try {
-      const stored = localStorage.getItem(storageKey);
-      setProgress(stored ? JSON.parse(stored) : emptyProgress());
-    } catch {
-      setProgress(emptyProgress());
-    }
+  const subscribe = useCallback((onStoreChange) => {
+    const handler = () => onStoreChange();
+    window.addEventListener("storage", handler);
+    window.addEventListener(PROGRESS_EVENT, handler);
+
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener(PROGRESS_EVENT, handler);
+    };
+  }, []);
+
+  const getSnapshot = useCallback(() => {
+    if (!storageKey) return "";
+    return localStorage.getItem(storageKey) || "";
   }, [storageKey]);
+
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, () => "");
+
+  const progress = useMemo(() => parseProgress(snapshot), [snapshot]);
 
   const persist = useCallback(
     (next) => {
-      setProgress(next);
       if (storageKey) {
         localStorage.setItem(storageKey, JSON.stringify(next));
+        window.dispatchEvent(new Event(PROGRESS_EVENT));
       }
     },
     [storageKey]

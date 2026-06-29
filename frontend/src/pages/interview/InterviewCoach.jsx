@@ -1,34 +1,32 @@
 import { useState } from "react";
-import axios from "axios";
+import { generateQuestions as requestQuestions } from "../../services/interviewService";
 
 export default function InterviewCoach() {
   const [role, setRole] = useState("");
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const generateQuestions = async () => {
     if (!role.trim()) {
-      alert("Please enter a role");
+      setError("Please enter a role");
       return;
     }
 
     try {
       setLoading(true);
+      setError("");
 
-      const res = await axios.post(
-  `${import.meta.env.VITE_API_URL}/api/interview/generate-questions`,
-  {
-    role,
-  }
-);
+      const res = await requestQuestions(role.trim());
 
-      setQuestions(res.data.questions);
+      setQuestions(res.data.questions || []);
     } catch (error) {
-      console.log(error);
-
-      alert(
+      console.error(error);
+      setQuestions([]);
+      setError(
         error.response?.data?.message ||
-          "Failed to generate questions"
+          error.message ||
+          "Failed to generate questions. Please try again."
       );
     } finally {
       setLoading(false);
@@ -78,6 +76,20 @@ export default function InterviewCoach() {
             : "Generate Questions"}
         </button>
       </div>
+
+      {error && (
+        <div
+          style={{
+            background: "#fee2e2",
+            color: "#991b1b",
+            padding: "12px",
+            marginBottom: "16px",
+            borderRadius: "8px",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {questions.length > 0 && (
         <div>

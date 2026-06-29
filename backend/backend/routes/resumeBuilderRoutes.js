@@ -1,35 +1,26 @@
 const express = require("express");
+const { protect } = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
 const {
-protect,
-} = require("../middleware/authMiddleware");
-
-const {
-createResume,
-generateSummary,
-getHistory,
-getResumeById,
+  createResume,
+  generateSummary,
+  getHistory,
+  getLatestResume,
+  getResumeById,
+  updateResume,
+  deleteResume,
 } = require("../controllers/resumeBuilderController");
 
-router.post("/create", protect, createResume);
+router.use(protect);
 
-router.post(
-"/generate-summary",
-protect,
-generateSummary
-);
-
-router.get(
-"/history",
-protect,
-getHistory
-);
-
-router.get(
-"/:id",
-protect,
-getResumeById
-);
+router.post("/create", createResume);
+router.post("/generate-summary", generateSummary);
+router.get("/history", getHistory);
+router.get("/latest", getLatestResume);
+router.put("/:id", updateResume);
+router.delete("/:id", deleteResume);
+router.get("/:id", getResumeById);
 
 module.exports = router;

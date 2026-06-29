@@ -1,11 +1,14 @@
-import { useState, useMemo } from "react";
-import api from "../../services/api";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageShell from "../../components/dashboard/PageShell";
 import RoadmapOverview from "../../components/roadmap/RoadmapOverview";
 import RoadmapTimeline from "../../components/roadmap/RoadmapTimeline";
 import useRoadmapProgress from "../../hooks/useRoadmapProgress";
 import { normalizeRoadmapResponse } from "../../utils/roadmapEnricher";
+import {
+  fetchLatestRoadmap,
+  generateRoadmap as requestRoadmap,
+} from "../../services/roadmapService";
 
 const SUGGESTED_ROLES = [
   "Frontend Developer",
@@ -19,6 +22,7 @@ export default function CareerRoadmap() {
   const [role, setRole] = useState("");
   const [roadmapData, setRoadmapData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
 
   const activeRole = roadmapData?.role || "";
@@ -27,8 +31,48 @@ export default function CareerRoadmap() {
 
   const stats = useMemo(
     () => computeStats(roadmapData?.stages),
-    [computeStats, roadmapData?.stages, progress]
+    [computeStats, roadmapData?.stages]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLatestRoadmap = async () => {
+      try {
+        setError("");
+        const res = await fetchLatestRoadmap();
+        if (cancelled) return;
+
+        const latest = res.data.roadmap;
+        if (!latest) {
+          setRoadmapData(null);
+          return;
+        }
+
+        const normalized = normalizeRoadmapResponse(latest);
+        setRoadmapData(normalized);
+        setRole(normalized?.role || "");
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setRoadmapData(null);
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Failed to load your latest roadmap."
+          );
+        }
+      } finally {
+        if (!cancelled) setInitialLoading(false);
+      }
+    };
+
+    loadLatestRoadmap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const generateRoadmap = async (targetRole) => {
     const trimmed = (targetRole ?? role).trim();
@@ -41,9 +85,7 @@ export default function CareerRoadmap() {
       setLoading(true);
       setError("");
 
-      const res = await api.post("/roadmap/generate", {
-        role: trimmed,
-      });
+      const res = await requestRoadmap(trimmed);
 
       const normalized = normalizeRoadmapResponse(res.data);
       if (!normalized) {
@@ -55,7 +97,11 @@ export default function CareerRoadmap() {
       setRole(trimmed);
     } catch (err) {
       console.error(err);
-      setError("Failed to generate roadmap. Make sure the backend is running.");
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to generate roadmap. Make sure the backend is running."
+      );
     } finally {
       setLoading(false);
     }
@@ -108,7 +154,7 @@ export default function CareerRoadmap() {
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || initialLoading}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {loading ? (
@@ -153,7 +199,7 @@ export default function CareerRoadmap() {
       )}
 
       {/* Empty state */}
-      {!roadmapData && !loading && (
+      {!roadmapData && !loading && !initialLoading && (
         <div className="dash-card flex flex-col items-center justify-center px-6 py-20 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 shadow-lg shadow-brand-500/25">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-white">
@@ -183,7 +229,7 @@ export default function CareerRoadmap() {
       )}
 
       {/* Loading skeleton */}
-      {loading && (
+      {(loading || initialLoading) && (
         <div className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-12">
             <div className="dash-card h-40 animate-pulse lg:col-span-5" />
@@ -201,7 +247,7 @@ export default function CareerRoadmap() {
 
       {/* Roadmap content */}
       <AnimatePresence mode="wait">
-        {roadmapData && !loading && (
+        {roadmapData && !loading && !initialLoading && (
           <motion.div
             key={roadmapData.role}
             initial={{ opacity: 0 }}

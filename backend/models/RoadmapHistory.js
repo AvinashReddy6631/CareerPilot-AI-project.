@@ -5,6 +5,8 @@ const roadmapHistorySchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
+      index: true,
     },
     role: {
       type: String,
@@ -25,6 +27,18 @@ const roadmapHistorySchema = new mongoose.Schema(
     milestones: {
       type: [String],
       default: [],
+    },
+    roadmap: {
+      type: [String],
+      default: [],
+    },
+    stages: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+    meta: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
   },
   { timestamps: true }

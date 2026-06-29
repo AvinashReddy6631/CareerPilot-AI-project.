@@ -18,10 +18,12 @@ export default function ResumeHistoryPanel({ open, onClose, onLoad, onError }) {
       try {
         const res = await fetchResumeHistory();
         setResumes(res.data.resumes || []);
-      } catch {
-        setError("Could not load resume history. Check your connection.");
+      } catch (error) {
+        console.error(error);
+        const message = error.response?.data?.message || error.message || "Could not load resume history. Check your connection.";
+        setError(message);
         setResumes([]);
-        onError?.("Failed to load history");
+        onError?.(message);
       } finally {
         setLoading(false);
       }
@@ -36,8 +38,9 @@ export default function ResumeHistoryPanel({ open, onClose, onLoad, onError }) {
       const res = await fetchResumeById(id);
       onLoad(resumeFromApi(res.data.resume));
       onClose();
-    } catch {
-      onError?.("Failed to load resume");
+    } catch (error) {
+      console.error(error);
+      onError?.(error.response?.data?.message || error.message || "Failed to load resume");
     } finally {
       setLoadingId(null);
     }

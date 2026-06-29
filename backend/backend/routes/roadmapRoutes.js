@@ -1,16 +1,35 @@
 const express = require("express");
-const { optionalAuth } = require("../middleware/optionalAuthMiddleware");
+const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
 const {
   generateRoadmap,
+  getHistory,
+  getLatestRoadmap,
+  updateRoadmap,
 } = require("../controllers/roadmapController");
+
+router.use(protect);
+
+router.get(
+  "/history",
+  getHistory
+);
+
+router.get(
+  "/latest",
+  getLatestRoadmap
+);
 
 router.post(
   "/generate",
-  optionalAuth,
   generateRoadmap
+);
+
+router.put(
+  "/:id",
+  updateRoadmap
 );
 
 module.exports = router;

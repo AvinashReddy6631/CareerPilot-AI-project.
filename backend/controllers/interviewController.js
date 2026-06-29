@@ -11,19 +11,46 @@ const INDIAN_ENGLISH_RULES = `
 
 const parseAiJson = (content, fallback) => {
   try {
+    if (!content) return fallback;
     const cleaned = content
       .replace(/```json/g, "")
       .replace(/```/g, "")
       .trim();
     return JSON.parse(cleaned);
-  } catch {
+  } catch (error) {
+    console.error("Failed to parse AI JSON response:", error);
     return fallback;
   }
 };
 
+const getAiErrorMessage = (error) =>
+  error.response?.data?.error?.message ||
+  error.response?.data?.message ||
+  error.message ||
+  "AI request failed";
+
+const validateQuestions = (questions) =>
+  Array.isArray(questions) &&
+  questions.length > 0 &&
+  questions.every((question) => typeof question === "string" && question.trim());
+
 const generateQuestions = async (req, res) => {
   try {
     const { role } = req.body;
+
+    if (!role?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Role is required to generate interview questions",
+      });
+    }
+
+    if (!process.env.OPENROUTER_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        message: "OpenRouter API key is not configured on the server",
+      });
+    }
 
     const response = await ai.chat.completions.create({
       model: "openrouter/auto",
@@ -49,25 +76,41 @@ Each question must be under 15 words. Return ONLY valid JSON:
 {
   "questions": ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10"]
 }
-`,
+`, 
         },
       ],
     });
 
+    const content = response.choices?.[0]?.message?.content;
+
+    if (!content) {
+      return res.status(502).json({
+        success: false,
+        message: "OpenRouter returned an empty response",
+      });
+    }
+
     const data = parseAiJson(
-      response.choices[0].message.content,
+      content,
       { questions: [] }
     );
 
+    if (!validateQuestions(data.questions)) {
+      return res.status(502).json({
+        success: false,
+        message: "OpenRouter returned an invalid questions format",
+      });
+    }
+
     res.status(200).json({
       success: true,
-      questions: data.questions || [],
+      questions: data.questions.map((question) => question.trim()),
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    console.error(error);
+    res.status(error.status || 500).json({
       success: false,
-      message: error.message,
+      message: getAiErrorMessage(error),
     });
   }
 };
@@ -173,10 +216,10 @@ Return ONLY the question text, nothing else.
       nextQuestion,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: getAiErrorMessage(error),
     });
   }
 };
@@ -239,10 +282,10 @@ grade options: Excellent, Good, Average, Needs Practice
       report,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: getAiErrorMessage(error),
     });
   }
 };

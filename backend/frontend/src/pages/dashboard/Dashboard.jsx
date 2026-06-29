@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import api from "../../services/api";
+import {
+  fetchDashboardActivity,
+  fetchDashboardAnalytics,
+} from "../../services/dashboardService";
 import PageShell from "../../components/dashboard/PageShell";
 import StatCard from "../../components/dashboard/StatCard";
 import QuickActions from "../../components/dashboard/QuickActions";
@@ -23,33 +26,50 @@ const DEFAULT_STATS = {
 
 export default function Dashboard() {
   const [stats, setStats] = useState(DEFAULT_STATS);
+  const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityError, setActivityError] = useState("");
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await api.get("/dashboard/analytics");
+        const res = await fetchDashboardAnalytics();
         setStats({
           resumesBuilt: res.data.resumesBuilt ?? 0,
-          atsAverageScore: res.data.atsAverageScore ?? 78,
+          atsAverageScore: res.data.atsAverageScore ?? 0,
           interviewsTaken: res.data.interviewsTaken ?? 0,
           bestScore: res.data.bestScore ?? 0,
           applicationsSent: res.data.applicationsSent ?? 0,
         });
-      } catch {
-        setStats({
-          resumesBuilt: 3,
-          atsAverageScore: 78,
-          interviewsTaken: 12,
-          bestScore: 8.4,
-          applicationsSent: 7,
-        });
+      } catch (error) {
+        console.error(error);
+        setStats(DEFAULT_STATS);
       } finally {
         setLoading(false);
       }
     };
 
+    const fetchActivity = async () => {
+      try {
+        setActivityError("");
+        const res = await fetchDashboardActivity();
+        setActivities(res.data.activities || []);
+      } catch (error) {
+        console.error(error);
+        setActivityError(
+          error.response?.data?.message ||
+            error.message ||
+            "Could not load activity"
+        );
+        setActivities([]);
+      } finally {
+        setActivityLoading(false);
+      }
+    };
+
     fetchAnalytics();
+    fetchActivity();
   }, []);
 
   const greeting = () => {
@@ -119,7 +139,11 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-4">
-        <ActivityFeed />
+        <ActivityFeed
+          activities={activities}
+          loading={activityLoading}
+          error={activityError}
+        />
       </div>
     </PageShell>
   );

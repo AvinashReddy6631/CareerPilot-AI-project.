@@ -1,18 +1,22 @@
 const express = require("express");
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
 
 const {
-getAnalytics,
+  getAnalytics,
+  getActivity,
 } = require("../controllers/dashboardController");
 
-const {
-protect,
-} = require("../middleware/authMiddleware");
+router.get(
+  "/analytics",
+  protect,
+  getAnalytics
+);
 
 router.get(
-"/analytics",
-protect,
-getAnalytics
+  "/activity",
+  protect,
+  getActivity
 );
 
 module.exports = router;

@@ -1,17 +1,20 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { resumeToApi, getCompletionPercent } from "../../utils/resumeDefaults";
+import { useAuth } from "../../context/AuthContext";
+import { resumeToApi, resumeFromApi, getCompletionPercent, EMPTY_RESUME } from "../../utils/resumeDefaults";
 import { loadDraft, saveDraft, mergeWithDefaults } from "../../utils/resumeDraft";
 import { enhanceToBullets, delay } from "../../utils/bulletEnhancer";
 import { exportResumePdf } from "../../utils/exportResumePdf";
-import { saveResume, generateSummary } from "../../services/resumeService";
+import { saveResume, generateSummary, fetchLatestResume } from "../../services/resumeService";
 import ResumeForm from "../../components/resume/ResumeForm";
 import ResumePreview from "../../components/resume/ResumePreview";
 import ResumeHistoryPanel from "../../components/resume/ResumeHistoryPanel";
 import Toast from "../../components/resume/Toast";
 
 export default function ResumeBuilder() {
-  const [data, setData] = useState(() => mergeWithDefaults(loadDraft()));
+  const { user } = useAuth();
+  const userId = user?._id || user?.id || null;
+  const [data, setData] = useState(EMPTY_RESUME);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [bulletLoading, setBulletLoading] = useState(false);
@@ -22,25 +25,75 @@ export default function ResumeBuilder() {
   const [draftStatus, setDraftStatus] = useState("saved");
   const previewRef = useRef(null);
   const saveTimerRef = useRef(null);
+  const toastTimerRef = useRef(null);
+  const initializedRef = useRef(false);
 
   const showToast = useCallback((message, type = "success") => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3200);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3200);
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    initializedRef.current = false;
+
+    const loadLatestResume = async () => {
+      if (!userId) {
+        setData(EMPTY_RESUME);
+        initializedRef.current = true;
+        return;
+      }
+
+      try {
+        const res = await fetchLatestResume();
+        if (cancelled) return;
+
+        if (res.data.resume) {
+          setData(resumeFromApi(res.data.resume));
+        } else {
+          setData(EMPTY_RESUME);
+        }
+      } catch (error) {
+        console.error(error);
+        if (cancelled) return;
+        const draft = loadDraft(userId);
+        setData(mergeWithDefaults(draft));
+        showToast(error.response?.data?.message || error.message || "Failed to load latest resume", "error");
+      } finally {
+        if (!cancelled) initializedRef.current = true;
+      }
+    };
+
+    loadLatestResume();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, showToast]);
+
+  useEffect(() => {
+    if (!initializedRef.current || !userId) return;
+
     setDraftStatus("saving");
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
 
     saveTimerRef.current = setTimeout(() => {
-      const ok = saveDraft(data);
+      const ok = saveDraft(data, userId);
       setDraftStatus(ok ? "saved" : "error");
     }, 1200);
 
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [data]);
+  }, [data, userId]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   const handlePersonalChange = (e) => {
     const { name, value } = e.target;
@@ -81,8 +134,9 @@ export default function ResumeBuilder() {
         res.data.fallback ? "Summary generated (offline template)" : "AI summary ready",
         res.data.fallback ? "info" : "success"
       );
-    } catch {
-      showToast("Failed to generate summary", "error");
+    } catch (error) {
+      console.error(error);
+      showToast(error.response?.data?.message || error.message || "Failed to generate summary", "error");
     } finally {
       setSummaryLoading(false);
     }
@@ -102,8 +156,9 @@ export default function ResumeBuilder() {
       const enhanced = enhanceToBullets(text);
       setData((prev) => ({ ...prev, [fieldName]: enhanced }));
       showToast("Bullet points enhanced with action verbs");
-    } catch {
-      showToast("Failed to enhance bullets", "error");
+    } catch (error) {
+      console.error(error);
+      showToast(error.message || "Failed to enhance bullets", "error");
     } finally {
       setBulletLoading(false);
       setBulletField(null);
@@ -111,6 +166,8 @@ export default function ResumeBuilder() {
   };
 
   const handleSave = async () => {
+    if (saveLoading) return;
+
     if (!data.personal.name?.trim() || !data.personal.email?.trim()) {
       showToast("Name and email are required to save", "error");
       return;
@@ -121,6 +178,7 @@ export default function ResumeBuilder() {
       await saveResume(resumeToApi(data));
       showToast("Resume saved to history");
     } catch (err) {
+      console.error(err);
       showToast(err.response?.data?.message || "Failed to save resume", "error");
     } finally {
       setSaveLoading(false);
@@ -128,6 +186,8 @@ export default function ResumeBuilder() {
   };
 
   const handleDownloadPdf = async () => {
+    if (pdfLoading) return;
+
     if (!previewRef.current) {
       showToast("Add content to preview before downloading", "error");
       return;
@@ -138,8 +198,9 @@ export default function ResumeBuilder() {
       const name = data.personal.name || "Resume";
       await exportResumePdf(previewRef.current, name);
       showToast("PDF downloaded successfully");
-    } catch {
-      showToast("PDF export failed", "error");
+    } catch (error) {
+      console.error(error);
+      showToast(error.message || "PDF export failed", "error");
     } finally {
       setPdfLoading(false);
     }
