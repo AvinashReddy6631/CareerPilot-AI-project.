@@ -1,5 +1,5 @@
 {
-<<<<<<< HEAD
+
   "name": "careerpilot-ai",
   "version": "1.0.0",
   "main": "server.js",
@@ -24,10 +24,9 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-=======
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "jspdf": "^4.2.1"
->>>>>>> 72a1ef8bcd1b385f15f3e870cb09f9dd2634b84f
+ 72a1ef8bcd1b385f15f3e870cb09f9dd2634b84f
   }
 }
