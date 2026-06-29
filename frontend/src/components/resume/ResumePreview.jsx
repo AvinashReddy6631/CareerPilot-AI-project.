@@ -294,7 +294,10 @@ export default function ResumePreview({ data, previewRef, onTemplateChange, scal
   }}
   className="shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)]"
 >
-              <div ref={previewRef} className="overflow-hidden">
+              <div
+  ref={previewRef}
+  className="overflow-visible bg-white"
+>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={`${data.template}-content`}
