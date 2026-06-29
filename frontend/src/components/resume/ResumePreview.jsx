@@ -283,13 +283,17 @@ export default function ResumePreview({ data, previewRef, onTemplateChange, scal
         ) : (
           <div className="flex justify-center">
             <motion.div
-              key={data.template}
-              initial={{ opacity: 0, scale: scale * 0.98 }}
-              animate={{ opacity: 1, scale }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              style={{ transformOrigin: "top center", width: "210mm" }}
-              className="shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)]"
-            >
+  key={data.template}
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ duration: 0.35 }}
+  style={{
+    transform: `scale(${scale})`,
+    transformOrigin: "top center",
+    width: "210mm"
+  }}
+  className="shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)]"
+>
               <div ref={previewRef} className="overflow-hidden">
                 <AnimatePresence mode="wait">
                   <motion.div
