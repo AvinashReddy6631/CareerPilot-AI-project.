@@ -138,9 +138,10 @@ export default function ResumeBuilder() {
       const name = data.personal.name || "Resume";
       await exportResumePdf(previewRef.current, name);
       showToast("PDF downloaded successfully");
-    } catch {
-      showToast("PDF export failed", "error");
-    } finally {
+    } catch (error) {
+  console.error("PDF Export Error:", error);
+  showToast(error.message || "PDF export failed", "error");
+}finally {
       setPdfLoading(false);
     }
   };
