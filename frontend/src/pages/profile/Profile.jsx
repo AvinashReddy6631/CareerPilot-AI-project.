@@ -26,7 +26,7 @@ const DEFAULT_STATS = {
 export default function Profile() {
   const { user: authUser, updateUser } = useAuth();
 
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => authUser || null);
   const [missingFields, setMissingFields] = useState([]);
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [history, setHistory] = useState({ resumes: [], interviews: [], atsScans: [], roadmaps: [] });
@@ -57,11 +57,10 @@ export default function Profile() {
       updateUser(profileUser);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load profile.");
-      if (authUser) setUser(authUser);
     } finally {
       setLoading(false);
     }
-  }, [authUser, updateUser]);
+  }, [updateUser]);
 
   const loadStats = useCallback(async (targetRole) => {
     setStatsLoading(true);

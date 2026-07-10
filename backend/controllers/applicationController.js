@@ -1,21 +1,46 @@
 const JobApplication = require("../models/JobApplication");
 const { STATUSES } = require("../models/JobApplication");
 
+const buildStats = (applications) => {
+  const stats = Object.fromEntries(STATUSES.map((status) => [status, 0]));
+  applications.forEach((application) => {
+    if (stats[application.status] !== undefined) stats[application.status] += 1;
+  });
+  return stats;
+};
+
+const getJobId = (job) => {
+  const suppliedId = String(job.jobId || "").trim();
+  if (suppliedId) return suppliedId;
+
+  return [job.source, job.company, job.role, job.applyUrl]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .join("|");
+};
+
+const sendDatabaseError = (res, error) => {
+  if (error.name === "CastError") {
+    return res.status(400).json({ success: false, message: "Invalid application id" });
+  }
+
+  console.error("Application Tracker database error:", error);
+  return res.status(500).json({
+    success: false,
+    message: "Unable to complete the application request. Please try again.",
+  });
+};
+
 const getApplications = async (req, res) => {
   try {
-    const applications = await JobApplication.find({ user: req.user.id }).sort({
-      updatedAt: -1,
-    });
+    const applications = await JobApplication.find({ user: req.user.id })
+      .sort({ updatedAt: -1 })
+      .lean();
 
-    const stats = STATUSES.reduce((acc, status) => {
-      acc[status] = applications.filter((a) => a.status === status).length;
-      return acc;
-    }, {});
+    const stats = buildStats(applications);
 
     res.json({ success: true, applications, stats, statuses: STATUSES });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+    return sendDatabaseError(res, error);
   }
 };
 
@@ -30,33 +55,53 @@ const createApplication = async (req, res) => {
       });
     }
 
-    const existing = job.jobId
-      ? await JobApplication.findOne({ user: req.user.id, jobId: job.jobId })
-      : null;
-
-    if (existing) {
-      return res.json({ success: true, application: existing, existing: true });
+    if (!STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid application status" });
     }
 
-    const application = await JobApplication.create({
-      user: req.user.id,
-      jobId: job.jobId || "",
-      company: job.company,
-      role: job.role,
-      location: job.location || "",
-      salary: job.salary || "",
-      source: job.source || "",
-      applyUrl: job.applyUrl || "",
-      matchScore: job.matchScore ?? null,
-      status,
-      notes,
-      appliedAt: new Date(),
-    });
+    const jobId = getJobId(job);
+    const result = await JobApplication.findOneAndUpdate(
+      { user: req.user.id, jobId },
+      {
+        $setOnInsert: {
+          user: req.user.id,
+          jobId,
+          company: job.company.trim(),
+          role: job.role.trim(),
+          location: job.location || "",
+          salary: job.salary || "",
+          source: job.source || "",
+          applyUrl: job.applyUrl || "",
+          matchScore: job.matchScore ?? null,
+          status,
+          notes,
+          appliedAt: new Date(),
+        },
+      },
+      {
+        returnDocument: "after",
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+        includeResultMetadata: true,
+      }
+    );
 
-    res.status(201).json({ success: true, application });
+    const existing = Boolean(result.lastErrorObject?.updatedExisting);
+    return res.status(existing ? 200 : 201).json({
+      success: true,
+      application: result.value,
+      existing,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+    if (error.code === 11000) {
+      const application = await JobApplication.findOne({
+        user: req.user.id,
+        jobId: getJobId(req.body.job || {}),
+      });
+      return res.json({ success: true, application, existing: true });
+    }
+    return sendDatabaseError(res, error);
   }
 };
 
@@ -66,13 +111,22 @@ const updateApplication = async (req, res) => {
     const { status, notes } = req.body;
 
     const update = {};
-    if (status && STATUSES.includes(status)) update.status = status;
+    if (status !== undefined) {
+      if (!STATUSES.includes(status)) {
+        return res.status(400).json({ success: false, message: "Invalid application status" });
+      }
+      update.status = status;
+    }
     if (notes !== undefined) update.notes = notes;
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ success: false, message: "No application changes supplied" });
+    }
 
     const application = await JobApplication.findOneAndUpdate(
       { _id: id, user: req.user.id },
       update,
-      { new: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!application) {
@@ -84,8 +138,7 @@ const updateApplication = async (req, res) => {
 
     res.json({ success: true, application });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+    return sendDatabaseError(res, error);
   }
 };
 
@@ -104,8 +157,7 @@ const deleteApplication = async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+    return sendDatabaseError(res, error);
   }
 };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { generateQuestions as requestQuestions } from "../../services/interviewService";
 
 export default function InterviewCoach() {

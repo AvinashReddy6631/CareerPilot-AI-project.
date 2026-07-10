@@ -28,25 +28,32 @@ export default function EditProfileDrawer({ open, onClose, user, onSave, saving,
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
+  const initializedForOpenRef = useRef(false);
 
   useEffect(() => {
-    if (open && user) {
-      setForm({
-        name: user.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        college: user.college || "",
-        degree: user.degree || "",
-        graduationYear: user.graduationYear || "",
-        targetRole: user.targetRole || "",
-        skills: Array.isArray(user.skills) ? user.skills.join(", ") : "",
-        linkedinUrl: user.linkedinUrl || "",
-        githubUrl: user.githubUrl || "",
-        portfolioUrl: user.portfolioUrl || "",
-        profilePicture: user.profilePicture || "",
-      });
-      setErrors({});
+    if (!open) {
+      initializedForOpenRef.current = false;
+      return;
     }
+
+    if (!user || initializedForOpenRef.current) return;
+
+    setForm({
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      college: user.college || "",
+      degree: user.degree || "",
+      graduationYear: user.graduationYear || "",
+      targetRole: user.targetRole || "",
+      skills: Array.isArray(user.skills) ? user.skills.join(", ") : "",
+      linkedinUrl: user.linkedinUrl || "",
+      githubUrl: user.githubUrl || "",
+      portfolioUrl: user.portfolioUrl || "",
+      profilePicture: user.profilePicture || "",
+    });
+    setErrors({});
+    initializedForOpenRef.current = true;
   }, [open, user]);
 
   const handleChange = (e) => {

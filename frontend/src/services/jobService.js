@@ -1,6 +1,18 @@
 import api from "./api";
 import { getClientId } from "../utils/clientId";
 
+export const APPLICATIONS_CHANGED_EVENT = "careerpilot:applications-changed";
+
+const notifyApplicationsChanged = () => {
+  window.dispatchEvent(new Event(APPLICATIONS_CHANGED_EVENT));
+};
+
+const applicationMutation = async (request) => {
+  const response = await request();
+  notifyApplicationsChanged();
+  return response;
+};
+
 export const searchJobs = (params) =>
   api.post("/jobs/search", params);
 
@@ -20,10 +32,16 @@ export const getApplications = () =>
   api.get("/applications", { params: { clientId: getClientId() } });
 
 export const trackApplication = (job, status = "applied") =>
-  api.post("/applications", { clientId: getClientId(), job, status });
+  applicationMutation(() =>
+    api.post("/applications", { clientId: getClientId(), job, status })
+  );
 
 export const updateApplication = (id, data) =>
-  api.patch(`/applications/${id}`, data, { params: { clientId: getClientId() } });
+  applicationMutation(() =>
+    api.patch(`/applications/${id}`, data, { params: { clientId: getClientId() } })
+  );
 
 export const deleteApplication = (id) =>
-  api.delete(`/applications/${id}`, { params: { clientId: getClientId() } });
+  applicationMutation(() =>
+    api.delete(`/applications/${id}`, { params: { clientId: getClientId() } })
+  );

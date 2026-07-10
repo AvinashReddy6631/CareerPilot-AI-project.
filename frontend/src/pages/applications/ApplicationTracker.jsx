@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import PageShell from "../../components/dashboard/PageShell";
 import SourceBadge from "../../components/jobs/SourceBadge";
@@ -20,19 +20,19 @@ const COLUMNS = [
 
 export default function ApplicationTracker() {
   const [applications, setApplications] = useState([]);
-  const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dragId, setDragId] = useState(null);
+  const [mutatingId, setMutatingId] = useState(null);
 
   const fetchApps = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await getApplications();
       setApplications(res.data.applications || []);
-      setStats(res.data.stats || {});
-    } catch {
-      setError("Failed to load applications.");
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Failed to load applications.");
     } finally {
       setLoading(false);
     }
@@ -43,25 +43,39 @@ export default function ApplicationTracker() {
   }, [fetchApps]);
 
   const handleStatusChange = async (id, status) => {
+    const currentApplication = applications.find((application) => application._id === id);
+    if (!currentApplication || currentApplication.status === status || mutatingId) return;
+
+    setError("");
+    setMutatingId(id);
     try {
-      await updateApplication(id, { status });
+      const res = await updateApplication(id, { status });
+      const updatedApplication = res.data.application;
       setApplications((prev) =>
-        prev.map((a) => (a._id === id ? { ...a, status } : a))
+        prev.map((application) =>
+          application._id === id ? updatedApplication : application
+        )
       );
-      fetchApps();
-    } catch {
-      setError("Failed to update status.");
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Failed to update status.");
+    } finally {
+      setMutatingId(null);
     }
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Remove this application from tracker?")) return;
+    if (mutatingId) return;
+
+    setError("");
+    setMutatingId(id);
     try {
       await deleteApplication(id);
-      setApplications((prev) => prev.filter((a) => a._id !== id));
-      fetchApps();
-    } catch {
-      setError("Failed to delete.");
+      setApplications((prev) => prev.filter((application) => application._id !== id));
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Failed to delete.");
+    } finally {
+      setMutatingId(null);
     }
   };
 
@@ -70,6 +84,27 @@ export default function ApplicationTracker() {
     await handleStatusChange(dragId, status);
     setDragId(null);
   };
+
+  const stats = useMemo(() => {
+    const nextStats = Object.fromEntries(COLUMNS.map((column) => [column.id, 0]));
+    applications.forEach((application) => {
+      if (nextStats[application.status] !== undefined) {
+        nextStats[application.status] += 1;
+      }
+    });
+    return nextStats;
+  }, [applications]);
+
+  const applicationsByStatus = useMemo(
+    () =>
+      Object.fromEntries(
+        COLUMNS.map((column) => [
+          column.id,
+          applications.filter((application) => application.status === column.id),
+        ])
+      ),
+    [applications]
+  );
 
   const totalApps = applications.length;
 
@@ -135,7 +170,7 @@ export default function ApplicationTracker() {
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {COLUMNS.map((col) => {
-            const columnApps = applications.filter((a) => a.status === col.id);
+            const columnApps = applicationsByStatus[col.id];
 
             return (
               <div
@@ -179,6 +214,7 @@ export default function ApplicationTracker() {
                         <button
                           type="button"
                           onClick={() => handleDelete(app._id)}
+                          disabled={mutatingId === app._id}
                           className="shrink-0 rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-red-500 dark:hover:bg-slate-800"
                           title="Remove"
                         >
@@ -208,6 +244,7 @@ export default function ApplicationTracker() {
                         <select
                           value={app.status}
                           onChange={(e) => handleStatusChange(app._id, e.target.value)}
+                          disabled={mutatingId === app._id}
                           className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                         >
                           {COLUMNS.map((c) => (

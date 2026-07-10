@@ -1,6 +1,9 @@
 const ResumeBuilder = require(
   "../models/ResumeBuilder"
 );
+const ResumeWorkspace = require(
+  "../models/ResumeWorkspace"
+);
 
 const Interview = require(
   "../models/Interview"
@@ -47,8 +50,12 @@ const getAnalytics = async (
   res
 ) => {
   try {
-    const resumesBuilt =
-      await ResumeBuilder.countDocuments({ user: req.user.id });
+    const workspacesCount = await ResumeWorkspace.countDocuments({ user: req.user.id });
+    const legacyCount = await ResumeBuilder.countDocuments({
+      user: req.user.id,
+      _id: { $nin: await ResumeWorkspace.find({ user: req.user.id }).distinct("legacyResumeId") }
+    });
+    const resumesBuilt = workspacesCount + legacyCount;
 
     const interviews =
       await Interview.find({ user: req.user.id });

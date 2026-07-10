@@ -9,6 +9,7 @@ import {
   generateQuestions,
   evaluateAnswer,
   generateFinalReport,
+  getInterviewErrorMessage,
   saveInterviewHistory,
 } from "../../services/interviewService";
 
@@ -243,8 +244,10 @@ export default function MockInterview() {
       speakText(
         `Hello! Welcome to your ${role} mock interview with CareerPilot AI. We will go through ${TOTAL_QUESTIONS} questions. All the best! Here is your first question. ${qs[0]}`
       );
-    } catch {
-      setError("Failed to load questions. Please check your connection and try again.");
+    } catch (error) {
+      setError(
+        getInterviewErrorMessage(error, "Unable to generate interview questions.")
+      );
     } finally {
       setLoading(false);
     }
@@ -307,8 +310,8 @@ export default function MockInterview() {
       if (nextQ) {
         speakText(nextQ);
       }
-    } catch {
-      setError("Evaluation failed. Please try again.");
+    } catch (error) {
+      setError(getInterviewErrorMessage(error, "Unable to evaluate your answer."));
     } finally {
       setLoading(false);
     }
@@ -349,7 +352,8 @@ export default function MockInterview() {
         grade: enriched.grade,
         summary: enriched.summary,
       });
-    } catch {
+    } catch (error) {
+      setError(getInterviewErrorMessage(error, "Unable to generate the final report."));
       const avgScore =
         fullTranscript.reduce((s, t) => s + t.score, 0) / fullTranscript.length;
       setFinalReport({

@@ -1,6 +1,10 @@
 const ai = require("../config/ai");
 const ResumeBuilder = require("../models/ResumeBuilder");
 const mongoose = require("mongoose");
+const ResumeWorkspace = require("../models/ResumeWorkspace");
+const ResumeDraft = require("../models/ResumeDraft");
+const ResumeVersion = require("../models/ResumeVersion");
+const crypto = require("crypto");
 
 const buildSummaryFallback = (template, skills) => {
   const skillText = skills || "relevant technologies";
@@ -274,6 +278,466 @@ const deleteResume = async (req, res) => {
   }
 };
 
+const EMPTY_RESUME_DATA = {
+  personal: {
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    linkedin: "",
+    jobTitle: "",
+  },
+  summary: "",
+  education: "",
+  experience: "",
+  projects: "",
+  skills: "",
+  achievements: "",
+  certifications: "",
+  responsibilities: "",
+  template: "ATS Standard",
+};
+
+const generateHash = (data) => {
+  return crypto.createHash("sha256").update(JSON.stringify(data)).digest("hex");
+};
+
+const verifyWorkspace = async (workspaceId, userId, res) => {
+  if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
+    res.status(400).json({ success: false, message: "Invalid workspace id" });
+    return null;
+  }
+  const workspace = await ResumeWorkspace.findById(workspaceId);
+  if (!workspace) {
+    res.status(404).json({ success: false, message: "Workspace not found" });
+    return null;
+  }
+  if (workspace.user.toString() !== userId) {
+    res.status(403).json({ success: false, message: "Access denied" });
+    return null;
+  }
+  return workspace;
+};
+
+const createWorkspace = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const { name, jobTitle, template } = req.body;
+
+    const workspace = await ResumeWorkspace.create({
+      user: userId,
+      name: name?.trim() || "Untitled Resume",
+      jobTitle: jobTitle || "",
+      template: template || "ATS Standard",
+    });
+
+    const draft = await ResumeDraft.create({
+      workspace: workspace._id,
+      user: userId,
+      content: EMPTY_RESUME_DATA,
+      contentHash: generateHash(EMPTY_RESUME_DATA),
+    });
+
+    res.status(201).json({
+      success: true,
+      workspace,
+      draft,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to create workspace");
+  }
+};
+
+const getWorkspaces = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspaces = await ResumeWorkspace.find({ user: userId })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      workspaces,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to fetch workspaces");
+  }
+};
+
+const getWorkspaceById = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    res.status(200).json({
+      success: true,
+      workspace,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to fetch workspace");
+  }
+};
+
+const renameWorkspace = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const { name } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ success: false, message: "Workspace name is required" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    workspace.name = name.trim();
+    await workspace.save();
+
+    res.status(200).json({
+      success: true,
+      workspace,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to rename workspace");
+  }
+};
+
+const duplicateWorkspace = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    const draft = await ResumeDraft.findOne({ workspace: workspace._id }).lean();
+    const content = draft ? draft.content : EMPTY_RESUME_DATA;
+
+    const newWorkspace = await ResumeWorkspace.create({
+      user: userId,
+      name: `${workspace.name} - Copy`,
+      jobTitle: workspace.jobTitle,
+      template: workspace.template,
+      latestVersion: 0,
+    });
+
+    const newDraft = await ResumeDraft.create({
+      workspace: newWorkspace._id,
+      user: userId,
+      content,
+      contentHash: draft ? draft.contentHash : generateHash(EMPTY_RESUME_DATA),
+    });
+
+    res.status(201).json({
+      success: true,
+      workspace: newWorkspace,
+      draft: newDraft,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to duplicate workspace");
+  }
+};
+
+const deleteWorkspace = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    await Promise.all([
+      ResumeWorkspace.deleteOne({ _id: workspace._id }),
+      ResumeDraft.deleteOne({ workspace: workspace._id }),
+      ResumeVersion.deleteMany({ workspace: workspace._id }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Workspace and associated draft and versions deleted successfully",
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to delete workspace");
+  }
+};
+
+const getDraft = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    let draft = await ResumeDraft.findOne({ workspace: workspace._id });
+    if (!draft) {
+      draft = await ResumeDraft.create({
+        workspace: workspace._id,
+        user: userId,
+        content: EMPTY_RESUME_DATA,
+        contentHash: generateHash(EMPTY_RESUME_DATA),
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      draft,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to fetch draft");
+  }
+};
+
+const saveDraft = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const { content } = req.body;
+    if (!content || typeof content !== "object") {
+      return res.status(400).json({ success: false, message: "Valid content is required" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    const hash = generateHash(content);
+    const draft = await ResumeDraft.findOneAndUpdate(
+      { workspace: workspace._id },
+      { $set: { content, contentHash: hash } },
+      { new: true, upsert: true }
+    );
+
+    // Sync metadata with workspace if updated in draft
+    const updatedFields = {};
+    if (content.personal?.jobTitle !== undefined && content.personal.jobTitle !== workspace.jobTitle) {
+      updatedFields.jobTitle = content.personal.jobTitle;
+    }
+    if (content.template !== undefined && content.template !== workspace.template) {
+      updatedFields.template = content.template;
+    }
+    if (Object.keys(updatedFields).length > 0) {
+      await ResumeWorkspace.updateOne({ _id: workspace._id }, { $set: updatedFields });
+    }
+
+    res.status(200).json({
+      success: true,
+      draft,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to save draft");
+  }
+};
+
+const saveVersion = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const { name, content } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ success: false, message: "Version name is required" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    let contentToFreeze = content;
+    if (!contentToFreeze) {
+      const draft = await ResumeDraft.findOne({ workspace: workspace._id });
+      if (!draft) {
+        return res.status(400).json({ success: false, message: "No draft content to freeze" });
+      }
+      contentToFreeze = draft.content;
+    } else if (typeof contentToFreeze !== "object") {
+      return res.status(400).json({ success: false, message: "Valid version content is required" });
+    }
+
+    workspace.latestVersion += 1;
+    await workspace.save();
+
+    const version = await ResumeVersion.create({
+      workspace: workspace._id,
+      user: userId,
+      version: workspace.latestVersion,
+      name: name.trim(),
+      jobTitle: contentToFreeze.personal?.jobTitle || "",
+      template: contentToFreeze.template || "ATS Standard",
+      content: contentToFreeze,
+      contentHash: generateHash(contentToFreeze),
+    });
+
+    res.status(201).json({
+      success: true,
+      version,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to save version");
+  }
+};
+
+const getVersionHistory = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    const versions = await ResumeVersion.find({ workspace: workspace._id })
+      .sort({ version: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      versions,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to fetch version history");
+  }
+};
+
+const getVersionById = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    const { versionId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(versionId)) {
+      return res.status(400).json({ success: false, message: "Invalid version id" });
+    }
+
+    const version = await ResumeVersion.findById(versionId);
+    if (!version) {
+      return res.status(404).json({ success: false, message: "Version not found" });
+    }
+
+    if (version.workspace.toString() !== workspace._id.toString()) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    res.status(200).json({
+      success: true,
+      version,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to fetch version");
+  }
+};
+
+const restoreVersion = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    const { versionId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(versionId)) {
+      return res.status(400).json({ success: false, message: "Invalid version id" });
+    }
+
+    const version = await ResumeVersion.findById(versionId);
+    if (!version) {
+      return res.status(404).json({ success: false, message: "Version not found" });
+    }
+
+    if (version.workspace.toString() !== workspace._id.toString()) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    const draft = await ResumeDraft.findOneAndUpdate(
+      { workspace: workspace._id },
+      { $set: { content: version.content, contentHash: version.contentHash } },
+      { new: true }
+    );
+
+    // Sync metadata
+    await ResumeWorkspace.updateOne(
+      { _id: workspace._id },
+      { $set: { jobTitle: version.jobTitle, template: version.template } }
+    );
+
+    res.status(200).json({
+      success: true,
+      draft,
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to restore version");
+  }
+};
+
+const deleteVersion = async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Not authorized" });
+    }
+
+    const workspace = await verifyWorkspace(req.params.id, userId, res);
+    if (!workspace) return;
+
+    const { versionId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(versionId)) {
+      return res.status(400).json({ success: false, message: "Invalid version id" });
+    }
+
+    const version = await ResumeVersion.findById(versionId);
+    if (!version) {
+      return res.status(404).json({ success: false, message: "Version not found" });
+    }
+
+    if (version.workspace.toString() !== workspace._id.toString()) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    await ResumeVersion.deleteOne({ _id: version._id });
+
+    res.status(200).json({
+      success: true,
+      message: "Version deleted successfully",
+    });
+  } catch (error) {
+    return sendServerError(res, error, "Failed to delete version");
+  }
+};
+
 module.exports = {
   createResume,
   generateSummary,
@@ -282,4 +746,18 @@ module.exports = {
   getResumeById,
   updateResume,
   deleteResume,
+  createWorkspace,
+  getWorkspaces,
+  getWorkspaceById,
+  renameWorkspace,
+  duplicateWorkspace,
+  deleteWorkspace,
+  getDraft,
+  saveDraft,
+  saveVersion,
+  getVersionHistory,
+  getVersionById,
+  restoreVersion,
+  deleteVersion,
 };
+

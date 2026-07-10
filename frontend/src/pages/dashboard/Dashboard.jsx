@@ -15,6 +15,7 @@ import {
   IconInterview,
   IconApplications,
 } from "../../components/dashboard/NavIcons";
+import { APPLICATIONS_CHANGED_EVENT } from "../../services/jobService";
 
 const DEFAULT_STATS = {
   resumesBuilt: 0,
@@ -70,6 +71,15 @@ export default function Dashboard() {
 
     fetchAnalytics();
     fetchActivity();
+
+    const refreshApplications = () => {
+      fetchAnalytics();
+      fetchActivity();
+    };
+
+    window.addEventListener(APPLICATIONS_CHANGED_EVENT, refreshApplications);
+    return () =>
+      window.removeEventListener(APPLICATIONS_CHANGED_EVENT, refreshApplications);
   }, []);
 
   const greeting = () => {

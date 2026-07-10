@@ -30,5 +30,15 @@ const jobApplicationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// A job can be tracked once per user. The partial index keeps legacy records
+// without a job id out of the uniqueness constraint.
+jobApplicationSchema.index(
+  { user: 1, jobId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { jobId: { $type: "string", $gt: "" } },
+  }
+);
+
 module.exports = mongoose.model("JobApplication", jobApplicationSchema);
 module.exports.STATUSES = STATUSES;
