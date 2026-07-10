@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useState } from "react";
 import {
   IconDashboard,
   IconResume,
@@ -10,6 +11,7 @@ import {
   IconApplications,
   IconProfile,
 } from "./NavIcons";
+import ProComingSoonModal from "./ProComingSoonModal";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: IconDashboard },
@@ -24,8 +26,11 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ onNavigate }) {
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
+
   return (
-    <aside className="flex h-full flex-col">
+    <>
+      <aside className="flex h-full flex-col">
       <div className="flex h-14 items-center gap-2.5 border-b border-slate-200/80 px-5 dark:border-slate-800">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-violet-600 shadow-sm shadow-brand-500/20">
           <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-white">
@@ -77,12 +82,15 @@ export default function Sidebar({ onNavigate }) {
           </p>
           <button
             type="button"
+            onClick={() => setIsProModalOpen(true)}
             className="mt-2.5 w-full rounded-lg bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
           >
             View plans
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+      <ProComingSoonModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+    </>
   );
 }
