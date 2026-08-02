@@ -37,15 +37,15 @@ function LineChart({ data, max, unit }) {
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgb(99,102,241)" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="rgb(99,102,241)" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--chart-primary)" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="var(--chart-primary)" stopOpacity="0" />
           </linearGradient>
         </defs>
         <polygon points={areaPoints} fill="url(#lineGrad)" />
         <polyline
           points={points.join(" ")}
           fill="none"
-          stroke="rgb(99,102,241)"
+          stroke="var(--chart-primary)"
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -60,15 +60,14 @@ function LineChart({ data, max, unit }) {
               cx={x}
               cy={y}
               r="2"
-              fill="rgb(99,102,241)"
-              className="dark:fill-brand-400"
+              fill="var(--chart-primary)"
             />
           );
         })}
       </svg>
       <div className="mt-2 flex justify-between">
         {data.map((d) => (
-          <span key={d.label} className="text-[10px] text-slate-400">
+          <span key={d.label} className="text-[10px] text-slate-400 dark:text-slate-500">
             {d.label}
           </span>
         ))}
@@ -93,7 +92,7 @@ function BarChart({ data, max }) {
               className="w-full rounded-md bg-gradient-to-t from-brand-600 to-brand-400 transition-all dark:from-brand-500 dark:to-brand-300"
               style={{ height: `${(d.value / max) * 100}%`, minHeight: "8px" }}
             />
-            <span className="text-[10px] text-slate-400">{d.label}</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">{d.label}</span>
           </div>
         ))}
       </div>

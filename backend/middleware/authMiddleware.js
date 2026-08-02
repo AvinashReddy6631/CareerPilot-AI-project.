@@ -47,6 +47,15 @@ const protect = async (
 
       return next();
     } catch (error) {
+      if (req.originalUrl?.includes("/api/interview/generate-questions")) {
+        console.error("[AI Interview] JWT verification failed", {
+          "error.status": error.status,
+          "error.response?.status": error.response?.status,
+          "error.response?.data": error.response?.data,
+          "error.message": error.message,
+          "error.stack": error.stack,
+        });
+      }
       return res.status(401).json({
         success: false,
         message: "Not Authorized",
@@ -55,6 +64,15 @@ const protect = async (
   }
 
   if (!token) {
+    if (req.originalUrl?.includes("/api/interview/generate-questions")) {
+      console.error("[AI Interview] JWT verification failed", {
+        "error.status": undefined,
+        "error.response?.status": undefined,
+        "error.response?.data": undefined,
+        "error.message": "Authorization header with a Bearer token is required",
+        "error.stack": undefined,
+      });
+    }
     return res.status(401).json({
       success: false,
       message: "No Token",

@@ -61,12 +61,12 @@ export default function ForgotPassword() {
               </svg>
             </div>
 
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Check your inbox
             </h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
               If an account exists for{" "}
-              <span className="font-medium text-slate-700">{email}</span>, we&apos;ve
+              <span className="font-medium text-slate-700 dark:text-slate-200">{email}</span>, we&apos;ve
               sent password reset instructions.
             </p>
 
@@ -79,7 +79,7 @@ export default function ForgotPassword() {
 
             <Link
               to="/"
-              className="mt-6 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Back to sign in
             </Link>
@@ -95,7 +95,7 @@ export default function ForgotPassword() {
         <div className="mb-7">
           <Link
             to="/"
-            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
+            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           >
             <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M10 3L5 8l5 5" strokeLinecap="round" strokeLinejoin="round" />
@@ -103,10 +103,10 @@ export default function ForgotPassword() {
             Back to sign in
           </Link>
 
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Reset your password
           </h2>
-          <p className="mt-1.5 text-sm text-slate-500">
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
             Enter your email and we&apos;ll send you a reset link
           </p>
         </div>
@@ -129,7 +129,7 @@ export default function ForgotPassword() {
           <SubmitButton loading={loading}>Send reset link</SubmitButton>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
           Remember your password?{" "}
           <Link to="/" className="font-semibold text-brand-600 hover:text-brand-500">
             Sign in

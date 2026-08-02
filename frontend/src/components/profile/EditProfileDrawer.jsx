@@ -28,33 +28,33 @@ export default function EditProfileDrawer({ open, onClose, user, onSave, saving,
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
-  const initializedForOpenRef = useRef(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    if (!open) {
-      initializedForOpenRef.current = false;
-      return;
+    if (open && user && !hasInitialized.current) {
+      setForm({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        college: user.college || "",
+        degree: user.degree || "",
+        graduationYear: user.graduationYear || "",
+        targetRole: user.targetRole || "",
+        skills: Array.isArray(user.skills) ? user.skills.join(", ") : "",
+        linkedinUrl: user.linkedinUrl || "",
+        githubUrl: user.githubUrl || "",
+        portfolioUrl: user.portfolioUrl || "",
+        profilePicture: user.profilePicture || "",
+      });
+      setErrors({});
+      hasInitialized.current = true;
     }
 
-    if (!user || initializedForOpenRef.current) return;
-
-    setForm({
-      name: user.name || "",
-      email: user.email || "",
-      phone: user.phone || "",
-      college: user.college || "",
-      degree: user.degree || "",
-      graduationYear: user.graduationYear || "",
-      targetRole: user.targetRole || "",
-      skills: Array.isArray(user.skills) ? user.skills.join(", ") : "",
-      linkedinUrl: user.linkedinUrl || "",
-      githubUrl: user.githubUrl || "",
-      portfolioUrl: user.portfolioUrl || "",
-      profilePicture: user.profilePicture || "",
-    });
-    setErrors({});
-    initializedForOpenRef.current = true;
-  }, [open, user]);
+    // Reset initialization flag when drawer closes
+    if (!open) {
+      hasInitialized.current = false;
+    }
+  }, [open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -92,6 +92,11 @@ export default function ResumeForm({
           <ResumeInput label="Phone" name="phone" value={data.personal.phone} onChange={onPersonalChange} placeholder="+91 98765 43210" required />
           <ResumeInput label="Location" name="location" value={data.personal.location} onChange={onPersonalChange} placeholder="Bangalore, India" />
           <ResumeInput label="LinkedIn" name="linkedin" value={data.personal.linkedin} onChange={onPersonalChange} placeholder="linkedin.com/in/alexjohnson" />
+          <ResumeInput label="GitHub" name="github" value={data.personal.github} onChange={onPersonalChange} placeholder="github.com/alexjohnson" />
+          <ResumeInput label="Portfolio" name="portfolio" value={data.personal.portfolio} onChange={onPersonalChange} placeholder="alexjohnson.dev" />
+          <ResumeInput label="LeetCode" name="leetcode" value={data.personal.leetcode} onChange={onPersonalChange} placeholder="leetcode.com/u/alexjohnson" />
+          <ResumeInput label="HackerRank" name="hackerrank" value={data.personal.hackerrank} onChange={onPersonalChange} placeholder="hackerrank.com/profile/alexjohnson" />
+          <ResumeInput label="CodeChef" name="codechef" value={data.personal.codechef} onChange={onPersonalChange} placeholder="codechef.com/users/alexjohnson" />
         </div>
 
         <ResumeTextarea

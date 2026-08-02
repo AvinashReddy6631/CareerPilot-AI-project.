@@ -3,15 +3,16 @@ import AuthHero from "./AuthHero";
 
 export default function AuthLayout({ children }) {
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
-      <div className="lg:w-[52%] xl:w-1/2">
-        <div className="h-32 sm:h-40 lg:h-full">
+    <div className="flex min-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 lg:flex-row">
+      <div className="lg:w-[54%] xl:w-[52%]">
+        <div className="h-36 sm:h-44 lg:h-full">
           <AuthHero />
         </div>
       </div>
 
-      <div className="auth-grid-bg relative flex flex-1 flex-col bg-slate-50">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-100/80" />
+      <div className="auth-grid-bg relative flex flex-1 flex-col bg-slate-50 dark:bg-slate-950">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-100/80 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/60" />
+        <div className="pointer-events-none absolute -right-20 top-20 h-64 w-64 rounded-full bg-brand-300/15 blur-3xl dark:bg-brand-500/10" />
 
         <div className="relative flex flex-1 flex-col px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-12">
           <div className="mb-6 flex items-center justify-between lg:hidden">
@@ -26,11 +27,11 @@ export default function AuthLayout({ children }) {
                   />
                 </svg>
               </div>
-              <span className="text-base font-semibold text-slate-900">CareerPilot</span>
+              <span className="text-base font-semibold text-slate-900 dark:text-white">CareerPilot</span>
             </Link>
           </div>
 
-          <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center">
+          <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center">
             {children}
           </div>
 

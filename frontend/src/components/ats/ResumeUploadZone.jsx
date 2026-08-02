@@ -17,6 +17,9 @@ export default function ResumeUploadZone({ file, onFileChange, disabled }) {
 
   return (
     <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={file ? "Replace resume PDF" : "Upload resume PDF"}
       onDragOver={(e) => {
         e.preventDefault();
         if (!disabled) setDragOver(true);
@@ -24,6 +27,12 @@ export default function ResumeUploadZone({ file, onFileChange, disabled }) {
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
       onClick={() => !disabled && inputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
       className={`group relative cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 text-center transition-all ${
         dragOver
           ? "border-brand-400 bg-brand-50/50 dark:border-brand-500 dark:bg-brand-500/5"
@@ -57,7 +66,7 @@ export default function ResumeUploadZone({ file, onFileChange, disabled }) {
       {file ? (
         <>
           <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{file.name}</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {(file.size / 1024).toFixed(0)} KB · Click to replace
           </p>
         </>

@@ -38,8 +38,8 @@ export default function PasswordInput({
           aria-invalid={hasError}
           aria-describedby={hasError ? `${id}-error` : undefined}
           className={[
-            "input-ring w-full rounded-xl border bg-white py-2.5 pl-4 pr-11 text-sm text-slate-900 placeholder:text-slate-400",
-            "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
+          "input-ring theme-input w-full rounded-xl border py-2.5 pl-4 pr-11 text-sm",
+          "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500",
             hasError
               ? "border-red-300 focus:border-red-400"
               : "border-slate-200 focus:border-brand-500",
@@ -49,7 +49,7 @@ export default function PasswordInput({
           type="button"
           onClick={() => setVisible((v) => !v)}
           disabled={disabled}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50 dark:text-slate-500 dark:hover:text-slate-200"
           aria-label={visible ? "Hide password" : "Show password"}
         >
           {visible ? (

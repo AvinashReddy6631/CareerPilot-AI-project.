@@ -1,4 +1,4 @@
-export default function StatCard({ label, value, suffix = "", trend, trendUp, icon: Icon, accent }) {
+export default function StatCard({ label, value, suffix = "", trend, trendUp, icon: Icon, accent, loading = false }) {
   const accents = {
     indigo: "from-brand-500/10 to-brand-500/5 text-brand-600 dark:text-brand-400",
     violet: "from-violet-500/10 to-violet-500/5 text-violet-600 dark:text-violet-400",
@@ -8,10 +8,10 @@ export default function StatCard({ label, value, suffix = "", trend, trendUp, ic
   };
 
   return (
-    <div className="dash-card p-5">
+    <div className="dash-card group p-4 sm:p-5">
       <div className="flex items-start justify-between">
         <div
-          className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${accents[accent]}`}
+          className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-200 group-hover:scale-105 ${accents[accent]}`}
         >
           <Icon className="h-5 w-5" />
         </div>
@@ -27,13 +27,7 @@ export default function StatCard({ label, value, suffix = "", trend, trendUp, ic
           </span>
         )}
       </div>
-      <p className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-        {value}
-        {suffix && (
-          <span className="text-lg font-semibold text-slate-400">{suffix}</span>
-        )}
-      </p>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{label}</p>
+      {loading ? <><div className="skeleton mt-4 h-7 w-16 rounded" /><div className="skeleton mt-2 h-4 w-24 rounded" /></> : <><p className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{value}{suffix && (<span className="text-lg font-semibold text-slate-400">{suffix}</span>)}</p><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{label}</p></>}
     </div>
   );
 }

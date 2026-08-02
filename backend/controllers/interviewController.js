@@ -1,4 +1,5 @@
 const ai = require("../config/ai");
+const { OPENROUTER_MODEL, OPENROUTER_FREE_MODEL } = ai;
 const Interview = require("../models/Interview");
 
 const INDIAN_ENGLISH_RULES = `
@@ -16,55 +17,72 @@ const parseAiJson = (content, fallback) => {
       .replace(/```json/g, "")
       .replace(/```/g, "")
       .trim();
-    return JSON.parse(cleaned);
+    const json = cleaned.match(/\{[\s\S]*\}/)?.[0] || cleaned;
+    return JSON.parse(json);
   } catch (error) {
     console.error("Failed to parse AI JSON response:", error);
     return fallback;
   }
 };
 
+const logProviderError = (context, error) => {
+  console.error(`[AI Interview] ${context}`, {
+    "error.status": error.status,
+    "error.response?.status": error.response?.status,
+    "error.response?.data": error.response?.data,
+    "error.message": error.message,
+    "error.stack": error.stack,
+  });
+};
+
+const localInterviewQuestions = (role) => [
+  "Tell me about yourself.",
+  `Why did you choose ${role}?`,
+  `What core skills does a ${role} need?`,
+  `Explain one project related to ${role}.`,
+  `How would you solve a basic ${role} problem?`,
+  "Tell me about working in a team.",
+  "How do you handle feedback from teammates?",
+  "How would you manage a tight deadline?",
+  "What would you do after making a mistake?",
+  "Why should we hire you?",
+];
+
+const isTemporaryProviderFailure = (error) => {
+  const status = Number(error.status || error.response?.status);
+  return (
+    !status ||
+    status === 408 ||
+    status === 429 ||
+    (status >= 500 && status < 600) ||
+    ["APIConnectionError", "APIConnectionTimeoutError"].includes(error.name) ||
+    ["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "ECONNRESET"].includes(error.code)
+  );
+};
+
 const getOpenRouterError = (error) => {
   const status = Number(error.status || error.response?.status);
 
-  const knownErrors = {
-    401: {
-      message: "The OpenRouter API key is invalid or belongs to an unknown account.",
-      code: "OPENROUTER_INVALID_API_KEY",
-      responseStatus: 502,
-    },
-    403: {
-      message: "OpenRouter access was denied for this API key.",
-      code: "OPENROUTER_ACCESS_DENIED",
-      responseStatus: 502,
-    },
-    404: {
-      message: "The configured OpenRouter model is invalid or unavailable.",
-      code: "OPENROUTER_INVALID_MODEL",
-      responseStatus: 502,
-    },
-    429: {
-      message: "OpenRouter rate limit exceeded. Please try again shortly.",
-      code: "OPENROUTER_RATE_LIMITED",
-      responseStatus: 429,
-    },
-    500: {
-      message: "OpenRouter server error. Please try again shortly.",
-      code: "OPENROUTER_SERVER_ERROR",
-      responseStatus: 503,
-    },
-  };
+  const providerMessage =
+    error.response?.data?.error?.message ||
+    error.response?.data?.message ||
+    error.message;
 
-  if (knownErrors[status]) {
-    const { responseStatus, ...details } = knownErrors[status];
-    return { status: responseStatus, providerStatus: status, ...details };
+  if (status >= 400 && status < 500) {
+    return {
+      status,
+      providerStatus: status,
+      code: `OPENROUTER_${status}`,
+      message: providerMessage || "OpenRouter rejected the request.",
+    };
   }
 
   if (status >= 500 && status < 600) {
     return {
-      status: 503,
+      status,
       providerStatus: status,
-      code: "OPENROUTER_SERVER_ERROR",
-      message: "OpenRouter server error. Please try again shortly.",
+      code: `OPENROUTER_${status}`,
+      message: providerMessage || "OpenRouter server error. Please try again shortly.",
     };
   }
 
@@ -82,12 +100,10 @@ const getOpenRouterError = (error) => {
   }
 
   return {
-    status: status >= 400 && status < 500 ? 502 : 500,
+    status: 503,
+    ...(status && { providerStatus: status }),
     code: "OPENROUTER_REQUEST_FAILED",
-    message:
-      error.response?.data?.error?.message ||
-      error.response?.data?.message ||
-      "OpenRouter request failed. Please try again shortly.",
+    message: providerMessage || "OpenRouter request failed. Please try again shortly.",
   };
 };
 
@@ -108,6 +124,7 @@ const validateQuestions = (questions) =>
 
 const generateQuestions = async (req, res) => {
   try {
+    console.info("[AI Interview] STEP 3: Request body", req.body);
     const { role } = req.body;
 
     if (!role?.trim()) {
@@ -117,6 +134,11 @@ const generateQuestions = async (req, res) => {
       });
     }
 
+    console.info("[AI Interview] STEP 4: Role received", { role });
+    console.info("[AI Interview] STEP 5: OpenRouter API key loaded", {
+      loaded: Boolean(process.env.OPENROUTER_API_KEY),
+    });
+
     if (!process.env.OPENROUTER_API_KEY) {
       return res.status(500).json({
         success: false,
@@ -124,8 +146,14 @@ const generateQuestions = async (req, res) => {
       });
     }
 
-    const response = await ai.chat.completions.create({
-      model: "openrouter/auto",
+    let model = OPENROUTER_MODEL;
+    console.info("[AI Interview] STEP 6: Selected model", { model });
+    console.info("[AI Interview] STEP 7: Sending request to OpenRouter", { model });
+
+    let response;
+    try {
+      response = await ai.chat.completions.create({
+        model,
       messages: [
         {
           role: "user",
@@ -151,14 +179,59 @@ Each question must be under 15 words. Return ONLY valid JSON:
 `, 
         },
       ],
+        // Free routers can choose a reasoning model. This small structured
+        // response does not need reasoning, so reserve output tokens for JSON.
+        reasoning: { effort: "none", exclude: true },
+        response_format: { type: "json_object" },
+        max_tokens: 900,
+    });
+    } catch (error) {
+      // A custom model can disappear or lose its free variant. Retry once using
+      // the supported free router, without ever falling back for auth failures.
+      const providerStatus = Number(error.status || error.response?.status);
+      if (model !== OPENROUTER_FREE_MODEL && [400, 404].includes(providerStatus)) {
+        logProviderError("Configured model failed; retrying with free router", error);
+        model = OPENROUTER_FREE_MODEL;
+        console.info("[AI Interview] STEP 6: Selected fallback model", { model });
+        console.info("[AI Interview] STEP 7: Sending fallback request to OpenRouter", { model });
+        response = await ai.chat.completions.create({
+          model,
+          messages: [
+            {
+              role: "user",
+              content: `Generate exactly 10 short campus-placement interview questions for a ${role} role. ${INDIAN_ENGLISH_RULES} Return only valid JSON: {"questions":["Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8","Q9","Q10"]}`,
+            },
+          ],
+          reasoning: { effort: "none", exclude: true },
+          response_format: { type: "json_object" },
+          max_tokens: 900,
+        });
+      } else {
+        throw error;
+      }
+    }
+
+    console.info("[AI Interview] STEP 8: OpenRouter response", {
+      model: response.model,
+      finishReason: response.choices?.[0]?.finish_reason,
+      hasContent: Boolean(response.choices?.[0]?.message?.content),
+      contentPreview: response.choices?.[0]?.message?.content?.slice(0, 500),
     });
 
     const content = response.choices?.[0]?.message?.content;
 
     if (!content) {
-      return res.status(502).json({
-        success: false,
-        message: "OpenRouter returned an empty response",
+      const questions = localInterviewQuestions(role);
+      console.warn("[AI Interview] OpenRouter returned an empty response; using local fallback");
+      console.info("[AI Interview] STEP 10: Returning success", {
+        source: "local-fallback",
+        questionCount: questions.length,
+      });
+      return res.status(200).json({
+        success: true,
+        questions,
+        source: "local-fallback",
+        warning: "OpenRouter returned an empty response; locally generated questions are being used.",
       });
     }
 
@@ -166,20 +239,55 @@ Each question must be under 15 words. Return ONLY valid JSON:
       content,
       { questions: [] }
     );
+    console.info("[AI Interview] STEP 9: Parsed JSON", {
+      questionCount: Array.isArray(data.questions) ? data.questions.length : 0,
+    });
 
     if (!validateQuestions(data.questions)) {
-      return res.status(502).json({
-        success: false,
-        message: "OpenRouter returned an invalid questions format",
+      const questions = localInterviewQuestions(role);
+      console.warn("[AI Interview] OpenRouter returned invalid question JSON; using local fallback", {
+        finishReason: response.choices?.[0]?.finish_reason,
+        contentPreview: content.slice(0, 500),
+      });
+      console.info("[AI Interview] STEP 10: Returning success", {
+        source: "local-fallback",
+        questionCount: questions.length,
+      });
+      return res.status(200).json({
+        success: true,
+        questions,
+        source: "local-fallback",
+        warning: "OpenRouter returned invalid question JSON; locally generated questions are being used.",
       });
     }
 
-    res.status(200).json({
+    console.info("[AI Interview] STEP 10: Returning success", {
+      source: "openrouter",
+      questionCount: data.questions.length,
+    });
+    return res.status(200).json({
       success: true,
       questions: data.questions.map((question) => question.trim()),
+      source: "openrouter",
     });
   } catch (error) {
-    console.error(error);
+    logProviderError("Question generation failed", error);
+    if (isTemporaryProviderFailure(error)) {
+      const questions = localInterviewQuestions(req.body?.role?.trim() || "this role");
+      console.warn("[AI Interview] OpenRouter unavailable; returning local questions", {
+        questionCount: questions.length,
+      });
+      console.info("[AI Interview] STEP 10: Returning success", {
+        source: "local-fallback",
+        questionCount: questions.length,
+      });
+      return res.status(200).json({
+        success: true,
+        questions,
+        source: "local-fallback",
+        warning: "OpenRouter is temporarily unavailable; locally generated questions are being used.",
+      });
+    }
     return sendOpenRouterError(res, error);
   }
 };
@@ -195,7 +303,7 @@ const evaluateAnswer = async (req, res) => {
     } = req.body;
 
     const feedbackResponse = await ai.chat.completions.create({
-      model: "openrouter/auto",
+      model: OPENROUTER_MODEL,
       messages: [
         {
           role: "user",
@@ -244,7 +352,7 @@ Scoring guide (1-10):
 
     if (!isLastQuestion) {
       const nextQuestionResponse = await ai.chat.completions.create({
-        model: "openrouter/auto",
+        model: OPENROUTER_MODEL,
         messages: [
           {
             role: "user",
@@ -285,7 +393,7 @@ Return ONLY the question text, nothing else.
       nextQuestion,
     });
   } catch (error) {
-    console.error(error);
+    logProviderError("Answer evaluation failed", error);
     return sendOpenRouterError(res, error);
   }
 };
@@ -302,7 +410,7 @@ const generateFinalReport = async (req, res) => {
       .join("\n\n");
 
     const response = await ai.chat.completions.create({
-      model: "openrouter/auto",
+      model: OPENROUTER_MODEL,
       messages: [
         {
           role: "user",
@@ -348,7 +456,7 @@ grade options: Excellent, Good, Average, Needs Practice
       report,
     });
   } catch (error) {
-    console.error(error);
+    logProviderError("Final report generation failed", error);
     return sendOpenRouterError(res, error);
   }
 };

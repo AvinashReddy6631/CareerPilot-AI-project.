@@ -92,7 +92,7 @@ export default function CareerReadiness({ stats, loading }) {
                   <span className="text-sm font-medium text-slate-400">{metric.suffix}</span>
                 )}
               </p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">{metric.label}</p>
+              <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">{metric.label}</p>
             </div>
           );
         })}

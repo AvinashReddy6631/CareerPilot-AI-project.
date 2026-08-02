@@ -97,7 +97,7 @@ export default function JobDetailPanel({ job, onClose }) {
         )}
 
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Description
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
@@ -107,7 +107,7 @@ export default function JobDetailPanel({ job, onClose }) {
 
         {job.skills?.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Required Skills
             </h3>
             <div className="mt-2 flex flex-wrap gap-1.5">

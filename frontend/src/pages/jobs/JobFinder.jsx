@@ -123,30 +123,21 @@ export default function JobFinder() {
   };
 
   const handleTrack = async (job) => {
-    try {
-      const res = await trackApplication(
-        {
-          jobId: job.id,
-          company: job.company,
-          role: job.role,
-          location: job.location,
-          salary: job.salary,
-          source: job.source,
-          applyUrl: job.applyUrl,
-          matchScore: job.matchScore,
-        },
-        "applied"
-      );
-      showToast(
-        res.data.existing
-          ? "This job is already in your Application Tracker"
-          : "Added to Application Tracker"
-      );
-    } catch (requestError) {
-      showToast(
-        requestError.response?.data?.message || "Failed to add this job to the tracker"
-      );
-    }
+    // backend/applicationController dedupes using `job.jobId`
+    await trackApplication(
+      {
+        jobId: job.id,
+        company: job.company,
+        role: job.role,
+        location: job.location,
+        salary: job.salary,
+        source: job.source,
+        applyUrl: job.applyUrl,
+        matchScore: job.matchScore,
+      },
+      "applied"
+    );
+    showToast("Added to Application Tracker");
   };
 
   return (

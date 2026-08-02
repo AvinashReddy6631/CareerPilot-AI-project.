@@ -111,10 +111,10 @@ export default function Register() {
     <AuthLayout>
       <GlassCard>
         <div className="mb-7">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Create your account
           </h2>
-          <p className="mt-1.5 text-sm text-slate-500">
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
             Start building your career with AI-powered tools
           </p>
         </div>
@@ -179,13 +179,13 @@ export default function Register() {
           <SubmitButton loading={loading}>Create account</SubmitButton>
         </form>
 
-        <p className="mt-5 text-center text-xs leading-relaxed text-slate-400">
+        <p className="mt-5 text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
           By creating an account, you agree to our{" "}
-          <span className="text-slate-500">Terms of Service</span> and{" "}
-          <span className="text-slate-500">Privacy Policy</span>.
+          <span className="text-slate-500 dark:text-slate-400">Terms of Service</span> and{" "}
+          <span className="text-slate-500 dark:text-slate-400">Privacy Policy</span>.
         </p>
 
-        <p className="mt-4 text-center text-sm text-slate-500">
+        <p className="mt-4 text-center text-sm text-slate-500 dark:text-slate-400">
           Already have an account?{" "}
           <Link to="/" className="font-semibold text-brand-600 hover:text-brand-500">
             Sign in

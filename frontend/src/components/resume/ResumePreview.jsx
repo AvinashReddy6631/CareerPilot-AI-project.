@@ -1,256 +1,109 @@
 import { motion, AnimatePresence } from "framer-motion";
 import PreviewEmptyState from "./PreviewEmptyState";
 import TemplateSwitcher from "./TemplateSwitcher";
-import { PreviewSection } from "../../utils/parseResumeContent";
+import { buildResumeDocument } from "../../utils/parseResumeContent";
 
-function SkillsTags({ skills, variant = "default" }) {
-  if (!skills?.trim()) return null;
-  const items = skills.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
-
-  const tagClass = {
-    default: "bg-slate-100 text-slate-700",
-    modern: "bg-violet-100 text-violet-800",
-    minimal: "border border-slate-200 text-slate-600",
-    executive: "bg-amber-50 text-amber-900",
-    professional: "bg-brand-50 text-brand-800",
-  };
+function ContactLine({ contacts }) {
+  if (!contacts.length) return null;
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {items.map((skill) => (
-        <span
-          key={skill}
-          className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${tagClass[variant] || tagClass.default}`}
-        >
-          {skill}
+    <p className="mt-1.5 flex flex-wrap justify-center gap-x-1.5 gap-y-0.5 text-[10.5pt] leading-[1.35] text-slate-800">
+      {contacts.map((contact, index) => (
+        <span key={`${contact.label}-${index}`} className="inline-flex items-center">
+          {index > 0 && <span className="mr-1.5 text-slate-500">|</span>}
+          {contact.url ? (
+            <a href={contact.url} target="_blank" rel="noreferrer" className="underline decoration-slate-400 underline-offset-2">
+              {contact.label}
+            </a>
+          ) : contact.label}
         </span>
       ))}
-    </div>
+    </p>
   );
 }
 
-function ContactLine({ personal, className = "" }) {
-  const items = [
-    personal.email && { icon: "✉", text: personal.email },
-    personal.phone && { icon: "☎", text: personal.phone },
-    personal.location && { icon: "◎", text: personal.location },
-    personal.linkedin && { icon: "in", text: personal.linkedin },
-  ].filter(Boolean);
-
-  if (!items.length) return null;
-
+function SectionHeading({ children, tracking }) {
   return (
-    <div className={`flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500 ${className}`}>
-      {items.map((item) => (
-        <span key={item.text} className="inline-flex items-center gap-1">
-          <span className="text-[9px] opacity-60">{item.icon}</span>
-          {item.text}
-        </span>
-      ))}
-    </div>
+    <h2
+      className="mb-2 border-b border-slate-950 pb-1 text-[12pt] font-bold uppercase leading-none text-slate-950"
+      style={{ letterSpacing: tracking }}
+    >
+      {children}
+    </h2>
   );
 }
 
-function ATSStandard({ data }) {
-  const { personal, summary, education, experience, projects, skills, achievements, certifications, responsibilities } = data;
-
+function EntryList({ entries }) {
   return (
-    <div className="bg-white p-10 text-slate-900" style={{ minHeight: "297mm", width: "210mm" }}>
-      <header className="border-b-[2.5px] border-slate-900 pb-4">
-        <h1 className="text-[26px] font-bold tracking-tight leading-tight">
-          {personal.name || "Your Name"}
-        </h1>
-        {personal.jobTitle && (
-          <p className="mt-1 text-[13px] font-medium text-slate-600">{personal.jobTitle}</p>
-        )}
-        <ContactLine personal={personal} className="mt-2" />
-      </header>
-
-      {summary && (
-        <PreviewSection title="Summary" content={summary} variant="default" />
-      )}
-
-      {skills && (
-        <section className="mb-5">
-          <h3 className="mb-2.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-800">
-            <span className="h-px flex-1 bg-slate-200" />
-            Skills
-            <span className="h-px flex-1 bg-slate-200" />
-          </h3>
-          <SkillsTags skills={skills} />
-        </section>
-      )}
-
-      <PreviewSection title="Experience" content={experience} />
-      <PreviewSection title="Education" content={education} />
-      <PreviewSection title="Projects" content={projects} />
-      <PreviewSection title="Leadership & Responsibility" content={responsibilities} />
-      <PreviewSection title="Achievements" content={achievements} />
-      <PreviewSection title="Certifications" content={certifications} />
-    </div>
-  );
-}
-
-function Professional({ data }) {
-  const { personal, summary, education, experience, projects, skills, achievements, certifications, responsibilities } = data;
-
-  return (
-    <div className="bg-white p-10 font-serif text-slate-900" style={{ minHeight: "297mm", width: "210mm" }}>
-      <header className="text-center">
-        <h1 className="text-[30px] font-bold tracking-tight text-brand-900">
-          {personal.name || "Your Name"}
-        </h1>
-        {personal.jobTitle && (
-          <p className="mt-1 text-[13px] italic text-slate-600">{personal.jobTitle}</p>
-        )}
-        <ContactLine personal={personal} className="mt-3 justify-center" />
-      </header>
-      <div className="my-5 h-px bg-gradient-to-r from-transparent via-brand-300 to-transparent" />
-
-      {summary && <PreviewSection title="Executive Summary" content={summary} variant="professional" />}
-      {skills && (
-        <section className="mb-5">
-          <h3 className="mb-2.5 text-center text-[10px] font-bold uppercase tracking-[0.15em] text-brand-800">
-            Core Competencies
-          </h3>
-          <SkillsTags skills={skills} variant="professional" />
-        </section>
-      )}
-      <PreviewSection title="Professional Experience" content={experience} variant="professional" />
-      <PreviewSection title="Education" content={education} variant="professional" />
-      <PreviewSection title="Key Projects" content={projects} variant="professional" />
-      <PreviewSection title="Leadership" content={responsibilities} variant="professional" />
-      <PreviewSection title="Achievements & Awards" content={achievements} variant="professional" />
-      <PreviewSection title="Certifications" content={certifications} variant="professional" />
-    </div>
-  );
-}
-
-function Modern({ data }) {
-  const { personal, summary, education, experience, projects, skills, achievements, certifications, responsibilities } = data;
-
-  return (
-    <div className="flex bg-white text-slate-900" style={{ minHeight: "297mm", width: "210mm" }}>
-      <aside className="w-[74mm] shrink-0 bg-gradient-to-b from-violet-700 via-indigo-700 to-indigo-900 px-5 py-8 text-white">
-        <h1 className="text-[18px] font-bold leading-snug">
-          {personal.name || "Your Name"}
-        </h1>
-        {personal.jobTitle && (
-          <p className="mt-1.5 text-[10px] font-medium text-violet-200">{personal.jobTitle}</p>
-        )}
-        <div className="mt-6 space-y-2.5 border-t border-white/20 pt-5 text-[9px] leading-relaxed text-violet-100">
-          {personal.email && <p>{personal.email}</p>}
-          {personal.phone && <p>{personal.phone}</p>}
-          {personal.location && <p>{personal.location}</p>}
-          {personal.linkedin && <p className="break-all opacity-90">{personal.linkedin}</p>}
-        </div>
-        {skills && (
-          <div className="mt-7">
-            <h3 className="text-[9px] font-bold uppercase tracking-widest text-violet-300">Skills</h3>
-            <div className="mt-2.5 space-y-1.5">
-              {skills.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean).map((skill) => (
-                <p key={skill} className="text-[9px] text-white/90">▸ {skill}</p>
+    <div className="space-y-2.5">
+      {entries.map((entry, index) => (
+        <div key={`${entry.heading}-${index}`}>
+          {entry.heading && <p className="font-bold text-slate-950">{entry.heading}</p>}
+          {entry.prose.map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}
+          {entry.bullets.length > 0 && (
+            <ul className="mt-0.5 space-y-0.5 pl-4">
+              {entry.bullets.map((bullet, bulletIndex) => (
+                <li key={bulletIndex} className="pl-0.5">{bullet}</li>
               ))}
-            </div>
-          </div>
-        )}
-        {certifications && (
-          <div className="mt-7">
-            <h3 className="text-[9px] font-bold uppercase tracking-widest text-violet-300">Certifications</h3>
-            <p className="mt-2 whitespace-pre-wrap text-[9px] leading-relaxed text-white/90">{certifications}</p>
-          </div>
-        )}
-      </aside>
-      <main className="flex-1 px-7 py-8">
-        {summary && <PreviewSection title="Profile" content={summary} variant="modern" />}
-        <PreviewSection title="Experience" content={experience} variant="modern" />
-        <PreviewSection title="Education" content={education} variant="modern" />
-        <PreviewSection title="Projects" content={projects} variant="modern" />
-        <PreviewSection title="Leadership" content={responsibilities} variant="modern" />
-        <PreviewSection title="Achievements" content={achievements} variant="modern" />
-      </main>
-    </div>
-  );
-}
-
-function Minimal({ data }) {
-  const { personal, summary, education, experience, projects, skills, achievements, certifications, responsibilities } = data;
-
-  return (
-    <div className="bg-white px-12 py-10 text-slate-900" style={{ minHeight: "297mm", width: "210mm" }}>
-      <header className="mb-8">
-        <h1 className="text-[28px] font-light tracking-tight text-slate-900">
-          {personal.name || "Your Name"}
-        </h1>
-        {personal.jobTitle && (
-          <p className="mt-1 text-[12px] text-slate-500">{personal.jobTitle}</p>
-        )}
-        <ContactLine personal={personal} className="mt-3" />
-      </header>
-      {summary && (
-        <p className="mb-8 text-[11px] leading-relaxed text-slate-600">{summary}</p>
-      )}
-      {skills && (
-        <section className="mb-6">
-          <SkillsTags skills={skills} variant="minimal" />
-        </section>
-      )}
-      <PreviewSection title="Experience" content={experience} variant="minimal" />
-      <PreviewSection title="Education" content={education} variant="minimal" />
-      <PreviewSection title="Projects" content={projects} variant="minimal" />
-      <PreviewSection title="Responsibility" content={responsibilities} variant="minimal" />
-      <PreviewSection title="Achievements" content={achievements} variant="minimal" />
-      <PreviewSection title="Certifications" content={certifications} variant="minimal" />
-    </div>
-  );
-}
-
-function Executive({ data }) {
-  const { personal, summary, education, experience, projects, skills, achievements, certifications, responsibilities } = data;
-
-  return (
-    <div className="bg-white text-slate-900" style={{ minHeight: "297mm", width: "210mm" }}>
-      <header className="bg-gradient-to-r from-slate-900 to-slate-800 px-10 py-8 text-white">
-        <h1 className="text-[26px] font-bold tracking-tight">
-          {personal.name || "Your Name"}
-        </h1>
-        {personal.jobTitle && (
-          <p className="mt-1 text-[12px] text-amber-300">{personal.jobTitle}</p>
-        )}
-        <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-slate-300">
-          {personal.email && <span>{personal.email}</span>}
-          {personal.phone && <span>{personal.phone}</span>}
-          {personal.location && <span>{personal.location}</span>}
+            </ul>
+          )}
         </div>
-      </header>
-      <div className="p-10">
-        {summary && <PreviewSection title="Executive Profile" content={summary} variant="executive" />}
-        {skills && (
-          <section className="mb-5">
-            <h3 className="mb-2 border-l-2 border-amber-500 pl-2 text-[10px] font-bold uppercase tracking-widest">
-              Expertise
-            </h3>
-            <SkillsTags skills={skills} variant="executive" />
-          </section>
-        )}
-        <PreviewSection title="Experience" content={experience} variant="executive" />
-        <PreviewSection title="Education" content={education} variant="executive" />
-        <PreviewSection title="Projects" content={projects} variant="executive" />
-        <PreviewSection title="Leadership" content={responsibilities} variant="executive" />
-        <PreviewSection title="Achievements" content={achievements} variant="executive" />
-        <PreviewSection title="Certifications" content={certifications} variant="executive" />
-      </div>
+      ))}
     </div>
   );
 }
 
-const TEMPLATE_MAP = {
-  "ATS Standard": ATSStandard,
-  Professional,
-  Modern,
-  Minimal,
-  Executive,
-};
+function ResumeSection({ section, tracking }) {
+  return (
+    <section className="mb-4 break-inside-avoid last:mb-0">
+      <SectionHeading tracking={tracking}>{section.title}</SectionHeading>
+      {section.kind === "summary" && <p>{section.content}</p>}
+      {section.kind === "skills" && (
+        <div className="space-y-1">
+          {section.categories.map((category) => (
+            <p key={category.label}>
+              <strong>{category.label}:</strong> {category.items.join(", ")}
+            </p>
+          ))}
+        </div>
+      )}
+      {section.kind === "entries" && <EntryList entries={section.entries} />}
+      {section.kind === "profiles" && (
+        <p>
+          {section.content.map((profile, index) => (
+            <span key={profile.label}>
+              {index > 0 && <span className="px-1.5 text-slate-500">|</span>}
+              <strong>{profile.label}:</strong>{" "}
+              <a href={profile.url} target="_blank" rel="noreferrer" className="underline decoration-slate-400 underline-offset-2">
+                {profile.value}
+              </a>
+            </span>
+          ))}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ATSResumeDocument({ document }) {
+  const { personal, contacts, sections, theme } = document;
+
+  return (
+    <article
+      className="min-h-[297mm] w-[210mm] bg-white px-[0.6in] py-[0.6in] text-[10.5pt] leading-[1.35] text-slate-950"
+      style={{ fontFamily: theme.cssFont }}
+    >
+      <header className="mb-4 text-center">
+        <h1 className="text-[20pt] leading-tight text-slate-950" style={{ fontWeight: theme.nameWeight }}>
+          {personal.name || "Your Name"}
+        </h1>
+        {personal.jobTitle && <p className="mt-0.5 font-semibold text-slate-900">{personal.jobTitle}</p>}
+        <ContactLine contacts={contacts} />
+      </header>
+      {sections.map((section) => <ResumeSection key={section.title} section={section} tracking={theme.headingTracking} />)}
+    </article>
+  );
+}
 
 function isResumeEmpty(data) {
   return ![
@@ -260,53 +113,38 @@ function isResumeEmpty(data) {
     data.experience,
     data.education,
     data.skills,
-  ].some((v) => v?.trim());
+  ].some((value) => value?.trim());
 }
 
 export default function ResumePreview({ data, previewRef, onTemplateChange, scale = 0.52 }) {
-  const Template = TEMPLATE_MAP[data.template] || ATSStandard;
   const empty = isResumeEmpty(data);
+  const document = buildResumeDocument(data);
 
   return (
     <div className="flex h-full flex-col">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">Live Preview</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Updates as you type</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">A4 ATS layout · matches both export formats</p>
         </div>
         <TemplateSwitcher selected={data.template} onSelect={onTemplateChange} />
       </div>
 
       <div className="relative flex-1 overflow-auto rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-100 to-slate-200/80 p-5 shadow-inner dark:border-slate-700 dark:from-slate-900/60 dark:to-slate-950/60">
-        {empty ? (
-          <PreviewEmptyState />
-        ) : (
-          <div className="flex justify-center">
+        {empty ? <PreviewEmptyState /> : (
+          <div className="flex min-h-full justify-center">
             <motion.div
-  key={data.template}
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  transition={{ duration: 0.35 }}
-  style={{
-    transform: `scale(${scale})`,
-    transformOrigin: "top center",
-    width: "210mm"
-  }}
-  className="shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)]"
->
-              <div
-  ref={previewRef}
-  className="overflow-visible bg-white"
->
+              key={data.template}
+              initial={{ opacity: 0, scale: scale * 0.98 }}
+              animate={{ opacity: 1, scale }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              style={{ transformOrigin: "top center", width: "210mm" }}
+              className="h-fit shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)]"
+            >
+              <div ref={previewRef}>
                 <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`${data.template}-content`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Template data={data} />
+                  <motion.div key={`${data.template}-content`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <ATSResumeDocument document={document} />
                   </motion.div>
                 </AnimatePresence>
               </div>

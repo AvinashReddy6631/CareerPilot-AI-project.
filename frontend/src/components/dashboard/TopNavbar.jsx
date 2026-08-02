@@ -104,7 +104,7 @@ export default function TopNavbar({ onMenuClick }) {
           </button>
 
           {searchOpen && (
-            <div className="absolute left-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
               <div className="border-b border-slate-100 p-2 dark:border-slate-800">
                 <input
                   autoFocus
@@ -164,7 +164,7 @@ export default function TopNavbar({ onMenuClick }) {
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
               <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   Notifications
@@ -217,7 +217,7 @@ export default function TopNavbar({ onMenuClick }) {
             <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
               <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">CareerPilot User</p>
-                <p className="text-xs text-slate-500">Free plan</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Free plan</p>
               </div>
               <ul className="p-1">
                 <li>

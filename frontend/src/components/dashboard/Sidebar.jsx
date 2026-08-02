@@ -11,7 +11,7 @@ import {
   IconApplications,
   IconProfile,
 } from "./NavIcons";
-import ProComingSoonModal from "./ProComingSoonModal";
+import PricingModal from "./PricingModal";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: IconDashboard },
@@ -26,7 +26,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar({ onNavigate }) {
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
 
   return (
     <>
@@ -82,7 +82,10 @@ export default function Sidebar({ onNavigate }) {
           </p>
           <button
             type="button"
-            onClick={() => setIsProModalOpen(true)}
+            onClick={() => {
+              setIsPricingModalOpen(true);
+              onNavigate?.();
+            }}
             className="mt-2.5 w-full rounded-lg bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
           >
             View plans
@@ -90,7 +93,7 @@ export default function Sidebar({ onNavigate }) {
         </div>
       </div>
       </aside>
-      <ProComingSoonModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+      <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
     </>
   );
 }

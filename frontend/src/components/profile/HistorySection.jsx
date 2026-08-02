@@ -27,7 +27,7 @@ export default function HistorySection({ history, loading }) {
     <div className="dash-card overflow-hidden">
       <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Activity History</h3>
-        <p className="mt-0.5 text-xs text-slate-500">Your recent career platform activity</p>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Your recent career platform activity</p>
       </div>
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-3 py-2 dark:border-slate-800">

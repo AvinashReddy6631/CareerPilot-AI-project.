@@ -9,12 +9,30 @@ const {
 
 const router = express.Router();
 
-router.use(protect);
+const logRouteReached = (req, res, next) => {
+  console.info("[AI Interview] STEP 1: Route reached", {
+    method: req.method,
+    path: req.originalUrl,
+  });
+  next();
+};
+
+const logJwtVerified = (req, res, next) => {
+  console.info("[AI Interview] STEP 2: JWT verified", {
+    userId: req.user?._id?.toString(),
+  });
+  next();
+};
 
 router.post(
   "/generate-questions",
+  logRouteReached,
+  protect,
+  logJwtVerified,
   generateQuestions
 );
+
+router.use(protect);
 
 router.post(
   "/evaluate",

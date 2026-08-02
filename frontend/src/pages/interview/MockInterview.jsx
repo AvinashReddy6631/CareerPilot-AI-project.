@@ -9,7 +9,6 @@ import {
   generateQuestions,
   evaluateAnswer,
   generateFinalReport,
-  getInterviewErrorMessage,
   saveInterviewHistory,
 } from "../../services/interviewService";
 
@@ -64,6 +63,15 @@ function computeConfidenceScore(text, speechConfidence = 0) {
   return Math.round(Math.max(0, Math.min(100, wordScore - fillerPenalty + speechBoost)));
 }
 
+function getApiErrorMessage(error, fallback) {
+  return (
+    error.response?.data?.message ||
+    error.response?.data?.error?.message ||
+    error.message ||
+    fallback
+  );
+}
+
 function speakText(text) {
   try {
     if (!text || !text.toString().trim()) return;
@@ -78,22 +86,30 @@ function speakText(text) {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-IN";
-    utterance.rate = 0.95;
+    utterance.rate = 0.9;
+    
+utterance.pitch = 1;
+utterance.volume = 1;
+   const pickVoice = () => {
+  const voices = window.speechSynthesis.getVoices() || [];
 
-    const pickVoice = () => {
-      const voices = window.speechSynthesis.getVoices() || [];
-      // Prefer en-IN, but fall back to default.
-      const voice =
-        voices.find((v) => (v.lang || "").toLowerCase().startsWith("en-in")) ||
-        voices.find((v) => (v.lang || "").toLowerCase().startsWith("en")) ||
-        voices[0];
+  console.log("Available Voices:", voices);
 
-      if (voice) utterance.voice = voice;
-      return voices.length;
-    };
+  const voice =
+  voices.find(v => v.name.includes("Neerja")) ||
+  voices.find(v => v.name.includes("Prabhat")) ||
+  voices.find(v => v.lang === "en-IN") ||
+  voices.find(v => v.lang.startsWith("en")) ||
+  voices[0];
+  if (voice) {
+    utterance.voice = voice;
+    console.log("Using Voice:", voice.name, voice.lang);
+  }
 
-    const voiceCount = pickVoice();
+  return voices.length;
+};
 
+const voiceCount = pickVoice();
     // If voices are not loaded yet (common on first call), retry shortly.
     if (voiceCount === 0) {
       console.warn("No voices available yet. Retrying speak...");
@@ -109,9 +125,12 @@ function speakText(text) {
         }
       }, 250);
     } else {
-      window.speechSynthesis.speak(utterance);
-    }
+  window.speechSynthesis.cancel();
 
+  setTimeout(() => {
+    window.speechSynthesis.speak(utterance);
+  }, 300);
+}
     // Debug logging for production issues.
     utterance.onerror = (e) => {
       console.error("SpeechSynthesis utterance error:", e);
@@ -245,9 +264,8 @@ export default function MockInterview() {
         `Hello! Welcome to your ${role} mock interview with CareerPilot AI. We will go through ${TOTAL_QUESTIONS} questions. All the best! Here is your first question. ${qs[0]}`
       );
     } catch (error) {
-      setError(
-        getInterviewErrorMessage(error, "Unable to generate interview questions.")
-      );
+      console.error("[AI Interview] Question generation failed:", error);
+      setError(getApiErrorMessage(error, "Failed to load questions. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -311,7 +329,8 @@ export default function MockInterview() {
         speakText(nextQ);
       }
     } catch (error) {
-      setError(getInterviewErrorMessage(error, "Unable to evaluate your answer."));
+      console.error("[AI Interview] Answer evaluation failed:", error);
+      setError(getApiErrorMessage(error, "Evaluation failed. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -353,7 +372,7 @@ export default function MockInterview() {
         summary: enriched.summary,
       });
     } catch (error) {
-      setError(getInterviewErrorMessage(error, "Unable to generate the final report."));
+      console.error("[AI Interview] Final report generation failed:", error);
       const avgScore =
         fullTranscript.reduce((s, t) => s + t.score, 0) / fullTranscript.length;
       setFinalReport({

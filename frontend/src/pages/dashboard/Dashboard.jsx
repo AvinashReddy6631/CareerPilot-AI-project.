@@ -15,7 +15,6 @@ import {
   IconInterview,
   IconApplications,
 } from "../../components/dashboard/NavIcons";
-import { APPLICATIONS_CHANGED_EVENT } from "../../services/jobService";
 
 const DEFAULT_STATS = {
   resumesBuilt: 0,
@@ -71,15 +70,6 @@ export default function Dashboard() {
 
     fetchAnalytics();
     fetchActivity();
-
-    const refreshApplications = () => {
-      fetchAnalytics();
-      fetchActivity();
-    };
-
-    window.addEventListener(APPLICATIONS_CHANGED_EVENT, refreshApplications);
-    return () =>
-      window.removeEventListener(APPLICATIONS_CHANGED_EVENT, refreshApplications);
   }, []);
 
   const greeting = () => {
@@ -97,7 +87,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <StatCard
           label="Resumes Built"
-          value={loading ? "—" : stats.resumesBuilt}
+          value={stats.resumesBuilt}
+          loading={loading}
           icon={IconResume}
           accent="indigo"
           trend="12%"
@@ -105,7 +96,8 @@ export default function Dashboard() {
         />
         <StatCard
           label="ATS Average Score"
-          value={loading ? "—" : stats.atsAverageScore}
+          value={stats.atsAverageScore}
+          loading={loading}
           suffix="%"
           icon={IconATS}
           accent="violet"
@@ -114,7 +106,8 @@ export default function Dashboard() {
         />
         <StatCard
           label="Interviews Taken"
-          value={loading ? "—" : stats.interviewsTaken}
+          value={stats.interviewsTaken}
+          loading={loading}
           icon={IconMock}
           accent="cyan"
           trend="3"
@@ -122,7 +115,8 @@ export default function Dashboard() {
         />
         <StatCard
           label="Best Interview Score"
-          value={loading ? "—" : stats.bestScore}
+          value={stats.bestScore}
+          loading={loading}
           suffix="/10"
           icon={IconInterview}
           accent="emerald"
@@ -131,7 +125,8 @@ export default function Dashboard() {
         />
         <StatCard
           label="Applications Sent"
-          value={loading ? "—" : stats.applicationsSent}
+          value={stats.applicationsSent}
+          loading={loading}
           icon={IconApplications}
           accent="amber"
           trend="2"

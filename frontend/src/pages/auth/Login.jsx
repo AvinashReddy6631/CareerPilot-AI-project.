@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { LockKeyhole, Sparkles } from "lucide-react";
 import { loginUser } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
 import { validateEmail, validatePassword } from "../../utils/validation";
@@ -74,12 +76,15 @@ export default function Login() {
 
   return (
     <AuthLayout>
-      <GlassCard>
-        <div className="mb-7">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.42, ease: "easeOut" }}>
+      <GlassCard className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-300/20 blur-2xl" />
+        <div className="relative mb-7">
+          <div className="mb-5 flex items-center justify-between"><span className="inline-flex items-center gap-1.5 rounded-full border border-brand-100 bg-brand-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300"><Sparkles className="h-3 w-3" /> CareerPilot AI</span><LockKeyhole className="h-4 w-4 text-slate-400" aria-label="Secure sign in" /></div>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-[1.7rem]">
             Welcome back
           </h2>
-          <p className="mt-1.5 text-sm text-slate-500">
+          <p className="mt-1.5 text-sm leading-6 text-slate-500 dark:text-slate-400">
             Sign in to continue your career journey
           </p>
         </div>
@@ -124,7 +129,7 @@ export default function Login() {
           <SubmitButton loading={loading}>Sign in</SubmitButton>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="relative mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
           Don&apos;t have an account?{" "}
           <Link
             to="/register"
@@ -134,6 +139,8 @@ export default function Login() {
           </Link>
         </p>
       </GlassCard>
+      <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400"><LockKeyhole className="h-3.5 w-3.5" /> Your session is encrypted and protected.</p>
+      </motion.div>
     </AuthLayout>
   );
 }
