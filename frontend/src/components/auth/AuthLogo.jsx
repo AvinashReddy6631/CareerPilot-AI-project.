@@ -1,6 +1,6 @@
 export default function AuthLogo({ className = "" }) {
   return (
-    <div className={`flex items-center gap-2.5 ${className}`}>
+    <div className={`flex items-center justify-center lg:justify-start gap-2 sm:gap-3 w-full ${className}`}>
       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 shadow-lg shadow-brand-500/25">
         <svg
           viewBox="0 0 24 24"
