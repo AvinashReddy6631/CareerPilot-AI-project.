@@ -18,6 +18,17 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    resetPasswordTokenHash: {
+      type: String,
+      default: null,
+      index: true,
+    },
+
+    resetPasswordExpiresAt: {
+      type: Date,
+      default: null,
+    },
+
     college: {
       type: String,
       default: "",

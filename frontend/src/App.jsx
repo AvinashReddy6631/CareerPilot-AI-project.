@@ -9,6 +9,7 @@ import Login from "./pages/auth/Login";
 
 const Register = lazy(() => import("./pages/auth/Register"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 const DashboardLayout = lazy(() => import("./components/dashboard/DashboardLayout"));
 const Dashboard = lazy(() => import("./pages/dashboard/Dashboard"));
 const ATSAnalyzer = lazy(() => import("./pages/dashboard/ATSAnalyzer"));
@@ -30,6 +31,7 @@ function App() {
               <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
               <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               <Route
                 element={

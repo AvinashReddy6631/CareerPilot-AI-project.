@@ -15,7 +15,7 @@ export default function FormInput({
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="auth-label block text-sm font-medium text-slate-700">
         {label}
       </label>
       <input
@@ -31,7 +31,7 @@ export default function FormInput({
         aria-invalid={hasError}
         aria-describedby={hasError ? `${id}-error` : undefined}
         className={[
-          "input-ring theme-input w-full rounded-xl border px-4 py-2.5 text-sm",
+          "auth-input input-ring theme-input min-h-12 w-full rounded-xl border px-4 py-2.5 text-sm",
           "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500",
           hasError
             ? "border-red-300 focus:border-red-400"

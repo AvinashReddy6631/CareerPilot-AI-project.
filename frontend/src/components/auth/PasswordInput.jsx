@@ -19,7 +19,7 @@ export default function PasswordInput({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+        <label htmlFor={id} className="auth-label block text-sm font-medium text-slate-700">
           {label}
         </label>
         {hint}
@@ -38,7 +38,7 @@ export default function PasswordInput({
           aria-invalid={hasError}
           aria-describedby={hasError ? `${id}-error` : undefined}
           className={[
-          "input-ring theme-input w-full rounded-xl border py-2.5 pl-4 pr-11 text-sm",
+          "auth-input input-ring theme-input min-h-12 w-full rounded-xl border py-2.5 pl-4 pr-11 text-sm",
           "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500",
             hasError
               ? "border-red-300 focus:border-red-400"
@@ -49,7 +49,7 @@ export default function PasswordInput({
           type="button"
           onClick={() => setVisible((v) => !v)}
           disabled={disabled}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50 dark:text-slate-500 dark:hover:text-slate-200"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 transition-colors hover:text-brand-600 disabled:opacity-50 dark:text-slate-500 dark:hover:text-brand-300"
           aria-label={visible ? "Hide password" : "Show password"}
         >
           {visible ? (

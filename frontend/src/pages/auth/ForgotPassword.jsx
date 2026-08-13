@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { forgotPassword } from "../../services/authService";
 import { validateEmail } from "../../utils/validation";
 import AuthLayout from "../../components/auth/AuthLayout";
 import GlassCard from "../../components/auth/GlassCard";
@@ -9,35 +10,52 @@ import FormAlert from "../../components/auth/FormAlert";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [serverError, setServerError] = useState("");
   const [touched, setTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
 
   const handleChange = (e) => {
     setEmail(e.target.value);
-    if (touched) setError(validateEmail(e.target.value));
+    setServerError("");
+    if (touched) setEmailError(validateEmail(e.target.value));
   };
 
   const handleBlur = () => {
     setTouched(true);
-    setError(validateEmail(email));
+    setEmailError(validateEmail(email));
+  };
+
+  const requestReset = async ({ isResend = false } = {}) => {
+    setLoading(true);
+    setServerError("");
+
+    try {
+      await forgotPassword(email);
+      if (isResend) {
+        setResendMessage("If an account exists for this email, a new reset link has been sent.");
+      } else {
+        setSubmitted(true);
+      }
+    } catch (error) {
+      setServerError(
+        error.response?.data?.message || "Unable to process your request. Please try again later."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const emailError = validateEmail(email);
-    setError(emailError);
+    setEmailError(emailError);
     setTouched(true);
     if (emailError) return;
 
-    setLoading(true);
-
-    // Simulated request — wire to backend when reset endpoint is available
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    setLoading(false);
-    setSubmitted(true);
+    await requestReset();
   };
 
   if (submitted) {
@@ -73,13 +91,24 @@ export default function ForgotPassword() {
             <div className="mt-5 text-left">
               <FormAlert
                 type="success"
-                message="Didn't receive it? Check your spam folder or try again in a few minutes."
+                message={resendMessage || "Didn't receive it? Check your spam folder or try again in a few minutes."}
               />
             </div>
 
+            {serverError && <FormAlert type="error" message={serverError} />}
+
+            <button
+              type="button"
+              onClick={() => requestReset({ isResend: true })}
+              disabled={loading}
+              className="mt-5 text-sm font-semibold text-brand-600 transition-colors hover:text-brand-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Sending…" : "Resend reset link"}
+            </button>
+
             <Link
               to="/"
-              className="mt-6 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Back to sign in
             </Link>
@@ -111,6 +140,8 @@ export default function ForgotPassword() {
           </p>
         </div>
 
+        {serverError && <FormAlert type="error" message={serverError} />}
+
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <FormInput
             id="email"
@@ -121,7 +152,7 @@ export default function ForgotPassword() {
             onChange={handleChange}
             onBlur={handleBlur}
             placeholder="you@company.com"
-            error={touched ? error : ""}
+            error={touched ? emailError : ""}
             autoComplete="email"
             disabled={loading}
           />
