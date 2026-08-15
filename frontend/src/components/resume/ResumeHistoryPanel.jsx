@@ -65,10 +65,13 @@ export default function ResumeHistoryPanel({ open, onClose, onLoad, onError }) {
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
             className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="resume-history-title"
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
               <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-white">Resume History</h2>
+                <h2 id="resume-history-title" className="text-base font-semibold text-slate-900 dark:text-white">Resume History</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">Load a previously saved resume</p>
               </div>
               <button type="button" onClick={onClose} className="nav-icon-btn" aria-label="Close">

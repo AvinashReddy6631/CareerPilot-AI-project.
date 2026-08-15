@@ -31,10 +31,10 @@ export default function ProfileHeader({ user, onEdit }) {
         <div className="flex-1 text-center sm:text-left">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+              <h2 className="break-words text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
                 {user?.name || "CareerPilot User"}
               </h2>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
+              <p className="mt-0.5 break-all text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
               {user?.targetRole && (
                 <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
                   <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
@@ -76,7 +76,7 @@ export default function ProfileHeader({ user, onEdit }) {
               {user.skills.map((skill) => (
                 <span
                   key={skill}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300"
+                  className="max-w-full break-all rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300"
                 >
                   {skill}
                 </span>
@@ -136,7 +136,7 @@ function InfoChip({ icon, label }) {
   };
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
+    <span className="inline-flex max-w-full items-center gap-1.5 break-words rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
       {icons[icon]}
       {label}
     </span>

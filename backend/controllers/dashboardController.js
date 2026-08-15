@@ -50,51 +50,41 @@ const getAnalytics = async (
   res
 ) => {
   try {
-    const workspacesCount = await ResumeWorkspace.countDocuments({ user: req.user.id });
-    const legacyCount = await ResumeBuilder.countDocuments({
-      user: req.user.id,
-      _id: { $nin: await ResumeWorkspace.find({ user: req.user.id }).distinct("legacyResumeId") }
-    });
+    const userId = req.user._id;
+    const legacyCountPromise = ResumeWorkspace
+      .find({ user: userId })
+      .distinct("legacyResumeId")
+      .then((legacyResumeIds) => ResumeBuilder.countDocuments({
+        user: userId,
+        _id: { $nin: legacyResumeIds.filter(Boolean) },
+      }));
+
+    const [workspacesCount, legacyCount, interviewMetrics, atsMetrics, applicationsSent] = await Promise.all([
+      ResumeWorkspace.countDocuments({ user: userId }),
+      legacyCountPromise,
+      Interview.aggregate([
+        { $match: { user: userId } },
+        {
+          $group: {
+            _id: null,
+            interviewsTaken: { $sum: 1 },
+            averageScore: { $avg: "$score" },
+            bestScore: { $max: "$score" },
+          },
+        },
+      ]),
+      Resume.aggregate([
+        { $match: { user: userId } },
+        { $group: { _id: null, atsAverageScore: { $avg: { $ifNull: ["$atsScore", 0] } } } },
+      ]),
+      JobApplication.countDocuments({ user: userId, status: { $ne: "saved" } }),
+    ]);
     const resumesBuilt = workspacesCount + legacyCount;
-
-    const interviews =
-      await Interview.find({ user: req.user.id });
-
-    const interviewsTaken =
-      interviews.length;
-
-    const averageScore =
-      interviewsTaken > 0
-        ? (
-            interviews.reduce(
-              (sum, item) =>
-                sum + item.score,
-              0
-            ) / interviewsTaken
-          ).toFixed(1)
-        : 0;
-
-    const bestScore =
-      interviewsTaken > 0
-        ? Math.max(
-            ...interviews.map(
-              (i) => i.score
-            )
-          )
-        : 0;
-
-    const atsRecords = await Resume.find({ user: req.user.id }).select("atsScore");
-    const atsAverageScore =
-      atsRecords.length > 0
-        ? Math.round(
-            atsRecords.reduce((sum, r) => sum + (r.atsScore || 0), 0) / atsRecords.length
-          )
-        : 0;
-
-    const applicationsSent = await JobApplication.countDocuments({
-      user: req.user.id,
-      status: { $ne: "saved" },
-    });
+    const metrics = interviewMetrics[0];
+    const interviewsTaken = metrics?.interviewsTaken || 0;
+    const averageScore = interviewsTaken ? Number(metrics.averageScore || 0).toFixed(1) : 0;
+    const bestScore = metrics?.bestScore || 0;
+    const atsAverageScore = Math.round(atsMetrics[0]?.atsAverageScore || 0);
 
     res.json({
       resumesBuilt,

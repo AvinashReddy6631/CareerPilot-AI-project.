@@ -23,12 +23,12 @@ export default function JobDetailPanel({ job, onClose }) {
     <div className="dash-card sticky top-20 overflow-hidden">
       <div className="border-b border-slate-200/80 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/40">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{job.role}</h2>
+              <h2 className="break-words text-lg font-bold text-slate-900 dark:text-white">{job.role}</h2>
               <SourceBadge source={job.source} />
             </div>
-            <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">
+            <p className="mt-1 break-words text-sm font-medium text-slate-600 dark:text-slate-400">
               {job.company}
             </p>
           </div>
@@ -83,13 +83,13 @@ export default function JobDetailPanel({ job, onClose }) {
             )}
             {job.matchedSkills?.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <p className="break-words text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   Matched: {job.matchedSkills.join(", ")}
                 </p>
               </div>
             )}
             {job.missingSkills?.length > 0 && (
-              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              <p className="mt-1 break-words text-xs text-amber-600 dark:text-amber-400">
                 Missing: {job.missingSkills.slice(0, 5).join(", ")}
               </p>
             )}
@@ -100,7 +100,7 @@ export default function JobDetailPanel({ job, onClose }) {
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Description
           </h3>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+          <p className="mt-2 break-words text-sm leading-relaxed text-slate-600 dark:text-slate-400">
             {job.description}
           </p>
         </div>

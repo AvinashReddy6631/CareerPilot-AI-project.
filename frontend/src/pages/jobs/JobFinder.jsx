@@ -337,7 +337,7 @@ export default function JobFinder() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg dark:bg-white dark:text-slate-900">
+        <div className="fixed bottom-4 left-4 right-4 z-50 rounded-xl bg-slate-900 px-5 py-2.5 text-center text-sm font-medium text-white shadow-lg dark:bg-white dark:text-slate-900 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2">
           {toast}
         </div>
       )}

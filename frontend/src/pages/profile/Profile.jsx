@@ -23,13 +23,20 @@ const DEFAULT_STATS = {
   applicationsSent: 0,
 };
 
+const EMPTY_HISTORY = {
+  resumes: [],
+  interviews: [],
+  atsScans: [],
+  roadmaps: [],
+};
+
 export default function Profile() {
-  const { user: authUser, updateUser } = useAuth();
+  const { updateUser } = useAuth();
 
   const [user, setUser] = useState(null);
   const [missingFields, setMissingFields] = useState([]);
   const [stats, setStats] = useState(DEFAULT_STATS);
-  const [history, setHistory] = useState({ resumes: [], interviews: [], atsScans: [], roadmaps: [] });
+  const [history, setHistory] = useState(EMPTY_HISTORY);
 
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -41,39 +48,88 @@ export default function Profile() {
   const [saveError, setSaveError] = useState("");
   const [toast, setToast] = useState(null);
 
-  const showToast = (message, type = "success") => {
+  const showToast = useCallback((message, type = "success") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Load profile ONCE when this Profile page mounts.
+  // Do not depend on the local `user` state or auth user state,
+  // because updateUser() below updates the auth context.
   const loadProfile = useCallback(async () => {
     setLoading(true);
     setError("");
+
     try {
       const res = await fetchProfile();
       const profileUser = res.data.user;
+
       setUser(profileUser);
       setMissingFields(res.data.missingFields || []);
+
+      // Sync the profile into AuthContext.
+      // This must NOT cause loadProfile itself to run again.
       updateUser(profileUser);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load profile.");
-      if (authUser) setUser(authUser);
+      console.error("Failed to load profile:", err);
+
+      setError(
+        err.response?.data?.message || "Failed to load profile."
+      );
     } finally {
       setLoading(false);
     }
-  }, [authUser, updateUser]);
+  }, [updateUser]);
 
+  // Load profile history independently.
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+
+    try {
+      const res = await fetchProfileHistory();
+
+      setHistory(res.data.history || EMPTY_HISTORY);
+    } catch (err) {
+      console.error("Failed to load profile history:", err);
+
+      setHistory(EMPTY_HISTORY);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  // Profile and history are loaded when the page mounts.
+  useEffect(() => {
+    loadProfile();
+    loadHistory();
+  }, [loadProfile, loadHistory]);
+
+  // Load statistics when the target role changes.
   const loadStats = useCallback(async (targetRole) => {
     setStatsLoading(true);
+
     try {
       const res = await fetchProfileStats();
       const serverStats = res.data.stats || DEFAULT_STATS;
-      const localRoadmapProgress = getRoadmapProgressPercent(targetRole);
+
+      const localRoadmapProgress =
+        getRoadmapProgressPercent(targetRole);
+
       setStats({
         ...serverStats,
-        roadmapProgress: Math.max(serverStats.roadmapProgress, localRoadmapProgress),
+        roadmapProgress: Math.max(
+          serverStats.roadmapProgress,
+          localRoadmapProgress
+        ),
       });
-    } catch {
+    } catch (err) {
+      console.error("Failed to load profile stats:", err);
+
       setStats({
         ...DEFAULT_STATS,
         roadmapProgress: getRoadmapProgressPercent(targetRole),
@@ -83,55 +139,50 @@ export default function Profile() {
     }
   }, []);
 
-  const loadHistory = useCallback(async () => {
-    setHistoryLoading(true);
-    try {
-      const res = await fetchProfileHistory();
-      setHistory(res.data.history || { resumes: [], interviews: [], atsScans: [], roadmaps: [] });
-    } catch {
-      setHistory({ resumes: [], interviews: [], atsScans: [], roadmaps: [] });
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadProfile();
-    loadHistory();
-  }, [loadProfile, loadHistory]);
-
-  useEffect(() => {
-    if (user?.targetRole) {
-      loadStats(user.targetRole);
-    } else {
-      loadStats("");
-    }
+    loadStats(user?.targetRole || "");
   }, [user?.targetRole, loadStats]);
 
   const handleSave = async (formData) => {
     setSaving(true);
     setSaveError("");
+
     try {
       const res = await updateProfile(formData);
       const updated = res.data.user;
+
       setUser(updated);
       setMissingFields(res.data.missingFields || []);
+
       updateUser(updated);
+
       setDrawerOpen(false);
+
       showToast("Profile updated successfully");
-      loadStats(updated.targetRole);
+
+      // Refresh stats after profile update.
+      loadStats(updated.targetRole || "");
     } catch (err) {
-      setSaveError(err.response?.data?.message || "Failed to update profile. Please try again.");
+      console.error("Failed to update profile:", err);
+
+      setSaveError(
+        err.response?.data?.message ||
+          "Failed to update profile. Please try again."
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const completionPercent = user?.profileCompletion ?? computeProfileCompletion(user);
+  const completionPercent =
+    user?.profileCompletion ?? computeProfileCompletion(user);
 
   if (loading && !user) {
     return (
-      <PageShell title="Profile" description="Manage your account and career preferences.">
+      <PageShell
+        title="Profile"
+        description="Manage your account and career preferences."
+      >
         <div className="flex items-center justify-center py-24">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" />
         </div>
@@ -151,12 +202,19 @@ export default function Profile() {
       )}
 
       <div className="space-y-4 sm:space-y-6">
-        <ProfileHeader user={user} onEdit={() => setDrawerOpen(true)} />
+        <ProfileHeader
+          user={user}
+          onEdit={() => setDrawerOpen(true)}
+        />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
           <div className="lg:col-span-2">
-            <CareerReadiness stats={stats} loading={statsLoading} />
+            <CareerReadiness
+              stats={stats}
+              loading={statsLoading}
+            />
           </div>
+
           <div>
             <ProfileCompletion
               percent={completionPercent}
@@ -166,13 +224,16 @@ export default function Profile() {
           </div>
         </div>
 
-        <HistorySection history={history} loading={historyLoading} />
+        <HistorySection
+          history={history}
+          loading={historyLoading}
+        />
 
-        {/* Profile details card */}
         <div className="dash-card p-5 sm:p-6">
           <h3 className="mb-4 text-sm font-semibold text-slate-900 dark:text-white">
             Profile Details
           </h3>
+
           <div className="grid grid-cols-1 gap-0 sm:grid-cols-2">
             {[
               { label: "Full Name", value: user?.name },
@@ -180,21 +241,44 @@ export default function Profile() {
               { label: "Phone", value: user?.phone },
               { label: "College", value: user?.college },
               { label: "Degree", value: user?.degree },
-              { label: "Graduation Year", value: user?.graduationYear },
-              { label: "Target Role", value: user?.targetRole },
-              { label: "Skills", value: user?.skills?.join(", ") },
-              { label: "LinkedIn", value: user?.linkedinUrl },
-              { label: "GitHub", value: user?.githubUrl },
-              { label: "Portfolio", value: user?.portfolioUrl },
+              {
+                label: "Graduation Year",
+                value: user?.graduationYear,
+              },
+              {
+                label: "Target Role",
+                value: user?.targetRole,
+              },
+              {
+                label: "Skills",
+                value: user?.skills?.join(", "),
+              },
+              {
+                label: "LinkedIn",
+                value: user?.linkedinUrl,
+              },
+              {
+                label: "GitHub",
+                value: user?.githubUrl,
+              },
+              {
+                label: "Portfolio",
+                value: user?.portfolioUrl,
+              },
             ].map((field) => (
               <div
                 key={field.label}
                 className="flex items-center justify-between border-b border-slate-100 py-3.5 last:border-0 dark:border-slate-800 sm:px-3"
               >
-                <span className="text-sm text-slate-500 dark:text-slate-400">{field.label}</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  {field.label}
+                </span>
+
                 <span className="max-w-[55%] truncate text-right text-sm font-medium text-slate-900 dark:text-white">
                   {field.value || (
-                    <span className="text-slate-300 dark:text-slate-600">Not set</span>
+                    <span className="text-slate-300 dark:text-slate-600">
+                      Not set
+                    </span>
                   )}
                 </span>
               </div>

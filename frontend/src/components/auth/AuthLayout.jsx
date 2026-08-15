@@ -59,7 +59,7 @@ export default function AuthLayout({ children }) {
   }, []);
 
   return (
-    <div ref={shellRef} className="auth-shell flex min-h-screen flex-col overflow-x-hidden lg:flex-row">
+    <div ref={shellRef} className="auth-shell flex min-h-screen flex-col overflow-hidden [contain:paint] lg:flex-row">
       <div className="auth-aurora" aria-hidden="true" />
 
       {/* Left Hero - Desktop Only */}
@@ -68,7 +68,7 @@ export default function AuthLayout({ children }) {
       </div>
 
       {/* Right Content */}
-      <div className="auth-panel auth-grid-bg relative z-10 flex w-full flex-1 flex-col">
+      <div className="auth-panel auth-grid-bg relative z-10 flex w-full flex-1 flex-col overflow-hidden">
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-100/80 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/60" />
 

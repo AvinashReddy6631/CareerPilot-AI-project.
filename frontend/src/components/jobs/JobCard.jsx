@@ -108,14 +108,14 @@ export default function JobCard({
       </div>
 
       <div
-        className="flex items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-slate-800"
+        className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3 dark:border-slate-800"
         onClick={(e) => e.stopPropagation()}
       >
         <a
           href={job.applyUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 sm:flex-1"
         >
           Apply on {job.source === "linkedin" ? "LinkedIn" : job.source.charAt(0).toUpperCase() + job.source.slice(1)}
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">

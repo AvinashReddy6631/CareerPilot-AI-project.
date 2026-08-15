@@ -601,7 +601,7 @@ export default function MockInterview() {
                 Make sure your face is clearly visible and the lighting is good.
               </p>
 
-              <div className="relative mx-auto mt-6 w-fit overflow-hidden rounded-2xl ring-4 ring-brand-500/20">
+              <div className="relative mx-auto mt-6 w-full max-w-[400px] overflow-hidden rounded-2xl ring-4 ring-brand-500/20">
                 <Webcam
                   ref={webcamRef}
                   audio={false}
@@ -611,7 +611,7 @@ export default function MockInterview() {
                   videoConstraints={{ facingMode: "user" }}
                   onUserMedia={() => setCameraReady(true)}
                   onUserMediaError={() => setCameraReady(false)}
-                  className="rounded-2xl"
+                  className="w-full rounded-2xl"
                 />
                 {cameraReady && (
                   <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-medium text-white">
@@ -837,7 +837,7 @@ export default function MockInterview() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4 p-6 sm:gap-8">
+                  <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-3 sm:gap-8 sm:p-6">
                     <div className="flex justify-center">
                       <ScoreRing
                         score={finalReport.averageScore}

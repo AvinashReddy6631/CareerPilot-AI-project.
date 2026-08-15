@@ -5,8 +5,6 @@ import { useAuth } from "../../context/AuthContext";
 import { resumeToApi, resumeFromApi, getCompletionPercent, EMPTY_RESUME } from "../../utils/resumeDefaults";
 import { loadDraft, saveDraft, mergeWithDefaults } from "../../utils/resumeDraft";
 import { enhanceToBullets, delay } from "../../utils/bulletEnhancer";
-import { exportResumePdf } from "../../utils/exportResumePdf";
-import { exportResumeDocx } from "../../utils/exportResumeDocx";
 import { saveResume, generateSummary, fetchLatestResume } from "../../services/resumeService";
 import ResumeForm from "../../components/resume/ResumeForm";
 import ResumePreview from "../../components/resume/ResumePreview";
@@ -210,8 +208,13 @@ export default function ResumeBuilder() {
     setExportLoading(format);
     try {
       const name = data.personal.name || "Resume";
-      if (format === "pdf") await exportResumePdf(data, name);
-      else await exportResumeDocx(data, name);
+      if (format === "pdf") {
+        const { exportResumePdf } = await import("../../utils/exportResumePdf");
+        await exportResumePdf(data, name);
+      } else {
+        const { exportResumeDocx } = await import("../../utils/exportResumeDocx");
+        await exportResumeDocx(data, name);
+      }
       showToast(`${format.toUpperCase()} downloaded successfully`);
     } catch (error) {
       console.error(error);
@@ -229,7 +232,7 @@ export default function ResumeBuilder() {
   const completion = getCompletionPercent(data);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col bg-slate-50/50 dark:bg-slate-950">
+    <div className="flex min-h-full min-w-0 flex-col bg-slate-50/50 dark:bg-slate-950 lg:h-[calc(100vh-3.5rem)] lg:min-h-0">
       {/* Toolbar */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
@@ -278,7 +281,7 @@ export default function ResumeBuilder() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <ToolbarButton onClick={() => setHistoryOpen(true)} icon="history">
             History
           </ToolbarButton>
@@ -291,8 +294,8 @@ export default function ResumeBuilder() {
       </motion.div>
 
       {/* Split layout */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2">
-        <div className="overflow-y-auto border-slate-200/80 p-4 sm:p-5 lg:border-r lg:p-6">
+      <div className="grid min-w-0 grid-cols-1 lg:min-h-0 lg:flex-1 lg:grid-cols-2">
+        <div className="min-w-0 overflow-visible border-slate-200/80 p-4 sm:p-5 lg:overflow-y-auto lg:border-r lg:p-6">
           <ResumeForm
             data={data}
             onPersonalChange={handlePersonalChange}
@@ -306,7 +309,7 @@ export default function ResumeBuilder() {
           />
         </div>
 
-        <div className="overflow-y-auto border-t border-slate-200/80 bg-white/40 p-4 dark:border-slate-800 dark:bg-slate-900/20 sm:p-5 lg:border-t-0 lg:p-6">
+        <div className="min-w-0 overflow-visible border-t border-slate-200/80 bg-white/40 p-4 dark:border-slate-800 dark:bg-slate-900/20 sm:p-5 lg:overflow-y-auto lg:border-t-0 lg:p-6">
           <div className="lg:sticky lg:top-0 lg:min-h-[calc(100vh-8rem)]">
             <ResumePreview
               data={data}

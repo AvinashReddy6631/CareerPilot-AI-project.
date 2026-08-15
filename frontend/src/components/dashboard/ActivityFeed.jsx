@@ -112,8 +112,8 @@ export default function ActivityFeed({
                 )}
               </div>
               <div className="min-w-0 flex-1 pb-1">
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{item.title}</p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{item.detail}</p>
+                <p className="break-words text-sm font-medium text-slate-900 dark:text-white">{item.title}</p>
+                <p className="mt-0.5 break-words text-xs text-slate-500 dark:text-slate-400">{item.detail}</p>
                 <p className="mt-1 text-[10px] text-slate-400">{formatRelativeTime(item.occurredAt)}</p>
               </div>
             </li>

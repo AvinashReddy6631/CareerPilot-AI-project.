@@ -121,7 +121,7 @@ export default function ResumePreview({ data, previewRef, onTemplateChange, scal
   const document = buildResumeDocument(data);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-[34rem] min-w-0 flex-col lg:h-full lg:min-h-0">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-900 dark:text-white">Live Preview</p>
@@ -130,16 +130,16 @@ export default function ResumePreview({ data, previewRef, onTemplateChange, scal
         <TemplateSwitcher selected={data.template} onSelect={onTemplateChange} />
       </div>
 
-      <div className="relative flex-1 overflow-auto rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-100 to-slate-200/80 p-5 shadow-inner dark:border-slate-700 dark:from-slate-900/60 dark:to-slate-950/60">
+      <div className="relative min-w-0 flex-1 overflow-auto rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-100 to-slate-200/80 p-5 shadow-inner dark:border-slate-700 dark:from-slate-900/60 dark:to-slate-950/60">
         {empty ? <PreviewEmptyState /> : (
-          <div className="flex min-h-full justify-center">
+          <div className="flex min-h-full justify-start lg:justify-center">
             <motion.div
               key={data.template}
               initial={{ opacity: 0, scale: scale * 0.98 }}
               animate={{ opacity: 1, scale }}
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-              style={{ transformOrigin: "top center", width: "210mm" }}
-              className="h-fit shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)]"
+              style={{ width: "210mm" }}
+              className="h-fit origin-top-left shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] lg:origin-top"
             >
               <div ref={previewRef}>
                 <AnimatePresence mode="wait">

@@ -138,7 +138,7 @@ function HistoryRow({ title, subtitle, badge, badgeColor = "brand" }) {
         <p className="truncate text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
       </div>
       {badge && (
-        <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold ${badgeColors[badgeColor]}`}>
+        <span className={`max-w-[45%] shrink-0 truncate rounded-lg px-2.5 py-1 text-xs font-semibold ${badgeColors[badgeColor]}`}>
           {badge}
         </span>
       )}

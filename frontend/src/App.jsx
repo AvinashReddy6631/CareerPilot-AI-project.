@@ -4,9 +4,10 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
+import RouteLoading from "./components/shared/RouteLoading";
+import RouteLoadErrorBoundary from "./components/shared/RouteLoadErrorBoundary";
 
-import Login from "./pages/auth/Login";
-
+const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
@@ -26,32 +27,34 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Suspense fallback={null}>
-            <Routes>
-              <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+          <RouteLoadErrorBoundary>
+            <Suspense fallback={<RouteLoading />}>
+              <Routes>
+                <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/resume-builder" element={<ResumeBuilder />} />
-                <Route path="/ats" element={<ATSAnalyzer />} />
-                <Route path="/interview" element={<InterviewCoach />} />
-                <Route path="/mock-interview" element={<MockInterview />} />
-                <Route path="/roadmap" element={<CareerRoadmap />} />
-                <Route path="/jobs" element={<JobFinder />} />
-                <Route path="/applications" element={<ApplicationTracker />} />
-                <Route path="/profile" element={<Profile />} />
-              </Route>
-            </Routes>
-          </Suspense>
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/resume-builder" element={<ResumeBuilder />} />
+                  <Route path="/ats" element={<ATSAnalyzer />} />
+                  <Route path="/interview" element={<InterviewCoach />} />
+                  <Route path="/mock-interview" element={<MockInterview />} />
+                  <Route path="/roadmap" element={<CareerRoadmap />} />
+                  <Route path="/jobs" element={<JobFinder />} />
+                  <Route path="/applications" element={<ApplicationTracker />} />
+                  <Route path="/profile" element={<Profile />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </RouteLoadErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

@@ -65,7 +65,7 @@ export default function ResumeUploadZone({ file, onFileChange, disabled }) {
 
       {file ? (
         <>
-          <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{file.name}</p>
+          <p className="mt-3 break-all text-sm font-semibold text-slate-900 dark:text-white">{file.name}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {(file.size / 1024).toFixed(0)} KB · Click to replace
           </p>

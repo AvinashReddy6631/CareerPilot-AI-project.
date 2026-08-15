@@ -137,16 +137,20 @@ export default function EditProfileDrawer({ open, onClose, user, onSave, saving,
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
             className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-slate-200/80 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-profile-title"
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Edit Profile</h2>
+                <h2 id="edit-profile-title" className="text-lg font-bold text-slate-900 dark:text-white">Edit Profile</h2>
                 <p className="text-xs text-slate-500">Update your career information</p>
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                aria-label="Close profile editor"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
                   <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />

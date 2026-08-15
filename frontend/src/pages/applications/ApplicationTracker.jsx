@@ -198,10 +198,10 @@ export default function ApplicationTracker() {
                       </div>
 
                       {app.location && (
-                        <p className="mt-2 text-[11px] text-slate-400">📍 {app.location}</p>
+                        <p className="mt-2 break-words text-[11px] text-slate-400">📍 {app.location}</p>
                       )}
                       {app.salary && (
-                        <p className="text-[11px] text-slate-400">💰 {app.salary}</p>
+                        <p className="break-words text-[11px] text-slate-400">💰 {app.salary}</p>
                       )}
 
                       <div className="mt-3 flex items-center gap-2">

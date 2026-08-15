@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import {
@@ -45,6 +45,7 @@ const SEARCH_ITEMS = [
 
 export default function TopNavbar({ onMenuClick }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -57,6 +58,18 @@ export default function TopNavbar({ onMenuClick }) {
   const notifRef = useRef(null);
   const userRef = useRef(null);
 
+  const closeDropdowns = useCallback(({ clearSearch = false } = {}) => {
+    setSearchOpen(false);
+    setNotifOpen(false);
+    setUserOpen(false);
+
+    if (clearSearch) setSearchQuery("");
+  }, []);
+
+  useLayoutEffect(() => {
+    closeDropdowns({ clearSearch: true });
+  }, [closeDropdowns, location.pathname]);
+
   useEffect(() => {
     const handleClick = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
@@ -67,6 +80,15 @@ export default function TopNavbar({ onMenuClick }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") closeDropdowns();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closeDropdowns]);
+
   const filteredSearch = SEARCH_ITEMS.filter((item) =>
     item.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -76,6 +98,24 @@ export default function TopNavbar({ onMenuClick }) {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const toggleSearch = () => {
+    setSearchOpen((open) => !open);
+    setNotifOpen(false);
+    setUserOpen(false);
+  };
+
+  const toggleNotifications = () => {
+    setNotifOpen((open) => !open);
+    setSearchOpen(false);
+    setUserOpen(false);
+  };
+
+  const toggleUserMenu = () => {
+    setUserOpen((open) => !open);
+    setSearchOpen(false);
+    setNotifOpen(false);
   };
 
   return (
@@ -90,11 +130,12 @@ export default function TopNavbar({ onMenuClick }) {
           <IconMenu className="h-5 w-5" />
         </button>
 
-        <div ref={searchRef} className="relative hidden sm:block">
+        <div ref={searchRef} className="relative">
           <button
             type="button"
-            onClick={() => setSearchOpen((o) => !o)}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500 transition-colors hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600"
+            onClick={toggleSearch}
+            className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500 transition-colors hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600 sm:flex"
+            aria-expanded={searchOpen}
           >
             <IconSearch className="h-4 w-4" />
             <span className="hidden md:inline">Search…</span>
@@ -104,7 +145,7 @@ export default function TopNavbar({ onMenuClick }) {
           </button>
 
           {searchOpen && (
-            <div className="absolute left-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="fixed inset-x-4 top-16 z-50 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:w-72">
               <div className="border-b border-slate-100 p-2 dark:border-slate-800">
                 <input
                   autoFocus
@@ -122,8 +163,7 @@ export default function TopNavbar({ onMenuClick }) {
                       type="button"
                       onClick={() => {
                         navigate(item.path);
-                        setSearchOpen(false);
-                        setSearchQuery("");
+                        closeDropdowns({ clearSearch: true });
                       }}
                       className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
@@ -143,9 +183,14 @@ export default function TopNavbar({ onMenuClick }) {
       <div className="flex items-center gap-1 sm:gap-2">
         <button
           type="button"
-          onClick={() => setSearchOpen(true)}
+          onClick={() => {
+            setSearchOpen(true);
+            setNotifOpen(false);
+            setUserOpen(false);
+          }}
           className="nav-icon-btn sm:hidden"
           aria-label="Search"
+          aria-expanded={searchOpen}
         >
           <IconSearch className="h-[18px] w-[18px]" />
         </button>
@@ -153,9 +198,10 @@ export default function TopNavbar({ onMenuClick }) {
         <div ref={notifRef} className="relative">
           <button
             type="button"
-            onClick={() => setNotifOpen((o) => !o)}
+            onClick={toggleNotifications}
             className="nav-icon-btn relative"
             aria-label="Notifications"
+            aria-expanded={notifOpen}
           >
             <IconBell className="h-[18px] w-[18px]" />
             {unreadCount > 0 && (
@@ -164,13 +210,13 @@ export default function TopNavbar({ onMenuClick }) {
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="absolute right-0 top-full z-50 mt-2 flex max-h-[calc(100dvh-5rem)] w-[calc(100vw-7rem)] max-w-[17.5rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:w-80 sm:max-w-none">
               <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">
                   Notifications
                 </p>
               </div>
-              <ul className="max-h-72 overflow-y-auto">
+              <ul className="min-h-0 flex-1 overflow-y-auto">
                 {NOTIFICATIONS.map((n) => (
                   <li
                     key={n.id}
@@ -206,9 +252,10 @@ export default function TopNavbar({ onMenuClick }) {
         <div ref={userRef} className="relative">
           <button
             type="button"
-            onClick={() => setUserOpen((o) => !o)}
+            onClick={toggleUserMenu}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-violet-600 text-xs font-bold text-white ring-2 ring-white dark:ring-slate-950"
             aria-label="User menu"
+            aria-expanded={userOpen}
           >
             CP
           </button>
@@ -225,7 +272,7 @@ export default function TopNavbar({ onMenuClick }) {
                     type="button"
                     onClick={() => {
                       navigate("/profile");
-                      setUserOpen(false);
+                      closeDropdowns();
                     }}
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
