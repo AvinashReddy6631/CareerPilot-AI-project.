@@ -6,6 +6,7 @@ const interviewHistorySchema =
       user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        index: true,
       },
 
       role: {

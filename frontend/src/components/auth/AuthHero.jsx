@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import AuthLogo from "./AuthLogo";
 import AuthIllustration from "./AuthIllustration";
@@ -21,7 +20,7 @@ export default function AuthHero() {
         <div className="auth-eyebrow inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold tracking-wide text-brand-100"><Sparkles className="h-3.5 w-3.5" /> YOUR AI CAREER COMMAND CENTER</div>
         <h1 className="mt-5 max-w-lg text-3xl font-bold leading-tight tracking-tight text-white xl:text-[2.65rem]">Turn every application into your best opportunity with <span className="bg-gradient-to-r from-brand-300 via-violet-300 to-cyan-300 bg-clip-text text-transparent">AI</span>.</h1>
         <ul className="mt-8 space-y-3.5">{FEATURES.map((feature) => <li key={feature} className="flex items-start gap-3 text-slate-300"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-300" /><span className="text-[15px] leading-snug">{feature}</span></li>)}</ul>
-        <motion.div className="mt-12" animate={{ y: [0, -6, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}><AuthIllustration /></motion.div>
+        <div className="auth-illustration-float mt-12"><AuthIllustration /></div>
       </div>
 
       <div className="auth-trust-row relative z-10 hidden items-center gap-6 text-sm lg:flex"><span>Trusted by 10,000+ job seekers</span><span className="h-1 w-1 rounded-full bg-slate-600" /><span>4.9★ average rating</span></div>

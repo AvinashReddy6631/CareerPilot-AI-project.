@@ -5,6 +5,7 @@ const resumeSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      index: true,
     },
 
     fileName: String,

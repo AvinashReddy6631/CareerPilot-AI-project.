@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import api from "../services/api";
-import { isTokenValid } from "../utils/authSession";
+import { getTokenPayload, isTokenValid } from "../utils/authSession";
 
 const AuthContext = createContext();
 
@@ -13,17 +13,34 @@ function getPersistedValidToken() {
   return null;
 }
 
+// The cached user is only reused when it belongs to the account inside the JWT,
+// so a cached profile can never be shown to a different signed-in user.
+function readCachedUserFor(activeToken) {
+  const tokenUserId = getTokenPayload(activeToken)?.id;
+  if (!tokenUserId) return null;
+
+  try {
+    const stored = localStorage.getItem(USER_KEY);
+    const cachedUser = stored ? JSON.parse(stored) : null;
+    const cachedUserId = cachedUser?.id || cachedUser?._id;
+    if (cachedUser && String(cachedUserId) === String(tokenUserId)) return cachedUser;
+  } catch {
+    return null;
+  }
+
+  localStorage.removeItem(USER_KEY);
+  return null;
+}
+
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(getPersistedValidToken);
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(USER_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+  const [user, setUser] = useState(() => readCachedUserFor(getPersistedValidToken()));
+  // Only block the UI when a locally valid JWT has no cached user to render with.
+  // With a cached user the shell renders immediately and /profile refreshes in the background.
+  const [isRestoring, setIsRestoring] = useState(() => {
+    const persistedToken = getPersistedValidToken();
+    return Boolean(persistedToken) && !readCachedUserFor(persistedToken);
   });
-  const [isRestoring, setIsRestoring] = useState(() => Boolean(getPersistedValidToken()));
 
   const logout = useCallback(() => {
     localStorage.removeItem("token");
@@ -61,30 +78,33 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = (jwtToken, userData = null) => {
+  const login = useCallback((jwtToken, userData = null) => {
     localStorage.setItem("token", jwtToken);
     setToken(jwtToken);
     setIsRestoring(false);
-    if (userData) setUser(userData);
-  };
+    setUser(userData || readCachedUserFor(jwtToken));
+  }, []);
 
-  const updateUser = (userData) => {
+  const updateUser = useCallback((userData) => {
     setUser((prev) => ({ ...prev, ...userData }));
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      token,
+      user,
+      login,
+      logout,
+      setUser,
+      updateUser,
+      isRestoring,
+      isAuthenticated: Boolean(token && isTokenValid(token)),
+    }),
+    [token, user, login, logout, updateUser, isRestoring]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        token,
-        user,
-        login,
-        logout,
-        setUser,
-        updateUser,
-        isRestoring,
-        isAuthenticated: Boolean(token && isTokenValid(token)),
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

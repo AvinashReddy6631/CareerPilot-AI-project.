@@ -5,8 +5,6 @@ import { useAuth } from "../../context/AuthContext";
 import { resumeToApi, resumeFromApi, getCompletionPercent, EMPTY_RESUME } from "../../utils/resumeDefaults";
 import { loadDraft, saveDraft, mergeWithDefaults } from "../../utils/resumeDraft";
 import { enhanceToBullets, delay } from "../../utils/bulletEnhancer";
-import { exportResumePdf } from "../../utils/exportResumePdf";
-import { exportResumeDocx } from "../../utils/exportResumeDocx";
 import { saveResume, generateSummary, fetchLatestResume } from "../../services/resumeService";
 import ResumeForm from "../../components/resume/ResumeForm";
 import ResumePreview from "../../components/resume/ResumePreview";
@@ -210,8 +208,14 @@ export default function ResumeBuilder() {
     setExportLoading(format);
     try {
       const name = data.personal.name || "Resume";
-      if (format === "pdf") await exportResumePdf(data, name);
-      else await exportResumeDocx(data, name);
+      // jsPDF/docx are only pulled in when the user actually exports.
+      if (format === "pdf") {
+        const { exportResumePdf } = await import("../../utils/exportResumePdf");
+        await exportResumePdf(data, name);
+      } else {
+        const { exportResumeDocx } = await import("../../utils/exportResumeDocx");
+        await exportResumeDocx(data, name);
+      }
       showToast(`${format.toUpperCase()} downloaded successfully`);
     } catch (error) {
       console.error(error);

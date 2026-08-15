@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { LockKeyhole, Sparkles } from "lucide-react";
 import { loginUser } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
@@ -76,7 +75,7 @@ export default function Login() {
 
   return (
     <AuthLayout>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.42, ease: "easeOut" }}>
+      <div className="auth-card-enter">
       <GlassCard className="relative overflow-hidden">
         <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-300/20 blur-2xl" />
         <div className="relative mb-7">
@@ -140,7 +139,7 @@ export default function Login() {
         </p>
       </GlassCard>
       <p className="mt-5 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400"><LockKeyhole className="h-3.5 w-3.5" /> Your session is encrypted and protected.</p>
-      </motion.div>
+      </div>
     </AuthLayout>
   );
 }
