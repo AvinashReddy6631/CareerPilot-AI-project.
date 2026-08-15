@@ -84,7 +84,7 @@ export default function Dashboard() {
       title={`${greeting()}, welcome back`}
       description="Here's an overview of your career progress and recent activity."
     >
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard
           label="Resumes Built"
           value={stats.resumesBuilt}

@@ -50,15 +50,33 @@ const getAnalytics = async (
   res
 ) => {
   try {
-    const workspacesCount = await ResumeWorkspace.countDocuments({ user: req.user.id });
-    const legacyCount = await ResumeBuilder.countDocuments({
-      user: req.user.id,
-      _id: { $nin: await ResumeWorkspace.find({ user: req.user.id }).distinct("legacyResumeId") }
-    });
-    const resumesBuilt = workspacesCount + legacyCount;
+    const userId = req.user.id;
 
-    const interviews =
-      await Interview.find({ user: req.user.id });
+    const migratedResumeIds = await ResumeWorkspace.find({ user: userId }).distinct(
+      "legacyResumeId"
+    );
+
+    const [
+      workspacesCount,
+      legacyCount,
+      interviews,
+      atsRecords,
+      applicationsSent,
+    ] = await Promise.all([
+      ResumeWorkspace.countDocuments({ user: userId }),
+      ResumeBuilder.countDocuments({
+        user: userId,
+        _id: { $nin: migratedResumeIds },
+      }),
+      Interview.find({ user: userId }).select("score").lean(),
+      Resume.find({ user: userId }).select("atsScore").lean(),
+      JobApplication.countDocuments({
+        user: userId,
+        status: { $ne: "saved" },
+      }),
+    ]);
+
+    const resumesBuilt = workspacesCount + legacyCount;
 
     const interviewsTaken =
       interviews.length;
@@ -83,18 +101,12 @@ const getAnalytics = async (
           )
         : 0;
 
-    const atsRecords = await Resume.find({ user: req.user.id }).select("atsScore");
     const atsAverageScore =
       atsRecords.length > 0
         ? Math.round(
             atsRecords.reduce((sum, r) => sum + (r.atsScore || 0), 0) / atsRecords.length
           )
         : 0;
-
-    const applicationsSent = await JobApplication.countDocuments({
-      user: req.user.id,
-      status: { $ne: "saved" },
-    });
 
     res.json({
       resumesBuilt,
@@ -130,29 +142,36 @@ const getActivity = async (
       ResumeBuilder.find({ user: userId })
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(8)
-        .select("name jobTitle template updatedAt createdAt"),
+        .select("name jobTitle template updatedAt createdAt")
+        .lean(),
       Resume.find({ user: userId })
         .sort({ createdAt: -1 })
         .limit(8)
-        .select("fileName atsScore createdAt updatedAt"),
+        .select("fileName atsScore createdAt updatedAt")
+        .lean(),
       Interview.find({ user: userId })
         .sort({ createdAt: -1 })
         .limit(8)
-        .select("role score createdAt updatedAt"),
+        .select("role score createdAt updatedAt")
+        .lean(),
       InterviewHistory.find({ user: userId })
         .sort({ interviewDate: -1, createdAt: -1 })
         .limit(8)
-        .select("role averageScore grade interviewDate createdAt updatedAt"),
+        .select("role averageScore grade interviewDate createdAt updatedAt")
+        .lean(),
       RoadmapHistory.find({ user: userId })
         .sort({ createdAt: -1 })
         .limit(8)
-        .select("role stagesCount estimatedMonths createdAt updatedAt"),
+        .select("role stagesCount estimatedMonths createdAt updatedAt")
+        .lean(),
       JobApplication.find({ user: userId })
         .sort({ updatedAt: -1, appliedAt: -1, createdAt: -1 })
         .limit(8)
-        .select("company role status appliedAt createdAt updatedAt"),
+        .select("company role status appliedAt createdAt updatedAt")
+        .lean(),
       User.findOne({ _id: userId })
-        .select("name profileCompletion createdAt updatedAt"),
+        .select("name profileCompletion createdAt updatedAt")
+        .lean(),
     ]);
 
     const activities = [

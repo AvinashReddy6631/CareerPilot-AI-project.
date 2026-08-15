@@ -4,6 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
+import RouteFallback from "./components/common/RouteFallback";
 
 import Login from "./pages/auth/Login";
 
@@ -26,7 +27,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Suspense fallback={null}>
+          <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
