@@ -25,7 +25,7 @@ const jobApplicationSchema = new mongoose.Schema(
       default: "applied",
     },
     notes: { type: String, default: "" },
-    appliedAt: { type: Date, default: Date.now },
+    appliedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

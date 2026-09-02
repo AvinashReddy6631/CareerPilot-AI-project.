@@ -1,5 +1,7 @@
 const express = require("express");
+
 const { protect } = require("../middleware/authMiddleware");
+
 const {
   search,
   matchJob,
@@ -10,9 +12,12 @@ const {
 
 const router = express.Router();
 
-router.get("/search", search);
-router.post("/search", search);
-router.post("/match", matchJob);
+// Job discovery requires login
+router.get("/search", protect, search);
+router.post("/search", protect, search);
+router.post("/match", protect, matchJob);
+
+// Saved jobs
 router.post("/saved", protect, saveJob);
 router.get("/saved", protect, getSavedJobs);
 router.delete("/saved/:id", protect, removeSavedJob);

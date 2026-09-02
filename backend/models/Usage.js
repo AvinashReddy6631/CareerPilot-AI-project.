@@ -15,6 +15,24 @@ const usageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // Application quota usage for the current billing period
+    applicationUsage: {
+      count: {
+        type: Number,
+        default: 0,
+      },
+
+      periodStart: {
+        type: Date,
+        default: null,
+      },
+
+      periodEnd: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,

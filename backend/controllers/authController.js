@@ -277,7 +277,7 @@ const resetPassword = async (req, res) => {
           resetPasswordExpiresAt: null,
         },
       },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!user) {

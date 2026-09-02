@@ -31,20 +31,41 @@ const profileRoutes = require("./routes/profileRoutes");
 
 
 
+
 const {
   notFound,
   errorHandler,
 } = require("./middleware/errorMiddleware");
-
 const app = express();
 
 app.use(helmet());
+const { apiLimiter } = require("./middleware/rateLimit");
+app.use(apiLimiter);
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: "*",
+    origin: function (origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error("Not allowed by CORS")
+      );
+    },
   })
 );
+
+
 
 app.use(
   "/api/payment/webhook",

@@ -21,6 +21,13 @@ export const getApplications = () =>
 
 export const trackApplication = (job, status = "applied") =>
   api.post("/applications", { clientId: getClientId(), job, status });
+export const applyToJob = async (job) => {
+  return api.post("/applications", {
+    clientId: getClientId(),
+    job,
+    status: "applied",
+  });
+};
 
 export const updateApplication = (id, data) =>
   api.patch(`/applications/${id}`, data, { params: { clientId: getClientId() } });

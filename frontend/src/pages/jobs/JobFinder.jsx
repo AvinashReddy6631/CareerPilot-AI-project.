@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import PageShell from "../../components/dashboard/PageShell";
 import JobCard from "../../components/jobs/JobCard";
+import UpgradeModal from "../../components/UpgradeModal";
 import JobDetailPanel from "../../components/jobs/JobDetailPanel";
 import { SOURCE_CONFIG } from "../../components/jobs/SourceBadge";
+import LockedJobCard from "../../components/jobs/LockedJobCard";
 import {
   searchJobs,
   saveJob,
@@ -30,6 +32,18 @@ export default function JobFinder() {
   const [total, setTotal] = useState(0);
   const [toast, setToast] = useState("");
 
+  const [access, setAccess] = useState({
+    plan: "FREE",
+    level: "limited",
+    upgradeRequired: true,
+    lockedCount: 0,
+    jobLimit: 4,
+  });
+
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [upgradeModalTitle, setUpgradeModalTitle] = useState("");
+  const [upgradeModalMessage, setUpgradeModalMessage] = useState("");
+
   const savedIds = new Set(savedJobs.map((s) => s.jobId));
 
   const showToast = (msg) => {
@@ -49,6 +63,7 @@ export default function JobFinder() {
   const runSearch = useCallback(async () => {
     setLoading(true);
     setError("");
+
     try {
       const res = await searchJobs({
         query,
@@ -58,11 +73,26 @@ export default function JobFinder() {
         resumeText: matchEnabled ? buildResumeText() : "",
         limit: 30,
       });
+
       const results = res.data.jobs || [];
+
       setJobs(results);
       setTotal(res.data.total || 0);
+
+      setAccess({
+        plan: res.data.access?.plan || "FREE",
+        level: res.data.access?.level || "limited",
+        upgradeRequired:
+          res.data.access?.upgradeRequired ?? true,
+        lockedCount: res.data.lockedCount || 0,
+        jobLimit: res.data.jobLimit ?? 4,
+      });
+
       setSelectedJob((prev) => {
-        if (prev && results.find((j) => j.id === prev.id)) return prev;
+        if (prev && results.find((j) => j.id === prev.id)) {
+          return prev;
+        }
+
         return results[0] || null;
       });
     } catch {
@@ -91,6 +121,7 @@ export default function JobFinder() {
         const next = prev.filter((s) => s !== source);
         return next.length ? next : SOURCES;
       }
+
       return [...prev, source];
     });
   };
@@ -109,12 +140,14 @@ export default function JobFinder() {
       description: job.description,
       skills: job.skills,
     });
+
     await fetchSaved();
     showToast("Job saved!");
   };
 
   const handleUnsave = async (job) => {
     const saved = savedJobs.find((s) => s.jobId === job.id);
+
     if (saved) {
       await removeSavedJob(saved._id);
       await fetchSaved();
@@ -137,7 +170,53 @@ export default function JobFinder() {
       },
       "applied"
     );
+
     showToast("Added to Application Tracker");
+  };
+
+  const handleApply = async (job) => {
+  try {
+    await trackApplication(job, "applied");
+
+    if (job.applyUrl) {
+      window.open(
+        job.applyUrl,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    }
+  } catch (error) {
+    const data = error.response?.data;
+
+    if (error.response?.status === 403) {
+      setUpgradeModalTitle("Application Limit Reached");
+      setUpgradeModalMessage(
+        data?.message ||
+          "You have reached your application limit. Upgrade your plan to apply to more jobs."
+      );
+      setUpgradeModalOpen(true);
+      return;
+    }
+
+    setToast(
+      data?.message ||
+        "Unable to apply to this job."
+    );
+  }
+};
+
+  const handleUpgrade = () => {
+    setUpgradeModalTitle("Unlock More Jobs");
+
+    setUpgradeModalMessage(
+      "Upgrade your plan to access more jobs and apply without limits."
+    );
+
+    setUpgradeModalOpen(true);
+  };
+
+  const closeUpgradeModal = () => {
+    setUpgradeModalOpen(false);
   };
 
   return (
@@ -158,6 +237,7 @@ export default function JobFinder() {
         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           Sources
         </span>
+
         {SOURCES.map((source) => (
           <button
             key={source}
@@ -165,7 +245,8 @@ export default function JobFinder() {
             onClick={() => toggleSource(source)}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               activeSources.includes(source)
-                ? SOURCE_CONFIG[source].className + " ring-2 ring-offset-1 ring-current/20"
+                ? SOURCE_CONFIG[source].className +
+                  " ring-2 ring-offset-1 ring-current/20"
                 : "bg-slate-100 text-slate-400 opacity-50 dark:bg-slate-800"
             }`}
           >
@@ -178,8 +259,16 @@ export default function JobFinder() {
       <div className="dash-card mb-5 overflow-hidden">
         <div className="flex border-b border-slate-200/80 dark:border-slate-800">
           {[
-            { id: "job", label: "Jobs", count: tab === "job" ? total : null },
-            { id: "internship", label: "Internships", count: tab === "internship" ? total : null },
+            {
+              id: "job",
+              label: "Jobs",
+              count: tab === "job" ? total : null,
+            },
+            {
+              id: "internship",
+              label: "Internships",
+              count: tab === "internship" ? total : null,
+            },
           ].map((t) => (
             <button
               key={t.id}
@@ -195,6 +284,7 @@ export default function JobFinder() {
               }`}
             >
               {t.label}
+
               {t.count != null && (
                 <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-xs dark:bg-brand-500/20">
                   {t.count}
@@ -204,11 +294,15 @@ export default function JobFinder() {
           ))}
         </div>
 
-        <form onSubmit={handleSearch} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end"
+        >
           <div className="flex-1">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
               Role or keyword
             </label>
+
             <input
               type="text"
               value={query}
@@ -217,10 +311,12 @@ export default function JobFinder() {
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             />
           </div>
+
           <div className="sm:w-48">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
               Location
             </label>
+
             <input
               type="text"
               value={location}
@@ -229,6 +325,7 @@ export default function JobFinder() {
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-brand-400 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             />
           </div>
+
           <button
             type="submit"
             className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
@@ -245,10 +342,12 @@ export default function JobFinder() {
               onChange={(e) => setMatchEnabled(e.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
             />
+
             <span className="text-sm text-slate-600 dark:text-slate-400">
               Resume match scoring
             </span>
           </label>
+
           {matchEnabled && !hasResumeContent() && (
             <Link
               to="/resume-builder"
@@ -257,9 +356,11 @@ export default function JobFinder() {
               Build your resume first →
             </Link>
           )}
+
           {savedJobs.length > 0 && (
             <span className="text-xs text-slate-400">
-              {savedJobs.length} saved job{savedJobs.length !== 1 ? "s" : ""}
+              {savedJobs.length} saved job
+              {savedJobs.length !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -276,9 +377,13 @@ export default function JobFinder() {
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="dash-card animate-pulse p-5">
+                <div
+                  key={i}
+                  className="dash-card animate-pulse p-5"
+                >
                   <div className="flex gap-4">
                     <div className="h-12 w-12 rounded-xl bg-slate-200 dark:bg-slate-700" />
+
                     <div className="flex-1 space-y-2">
                       <div className="h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
                       <div className="h-3 w-1/3 rounded bg-slate-200 dark:bg-slate-700" />
@@ -292,30 +397,49 @@ export default function JobFinder() {
               <p className="text-sm font-medium text-slate-900 dark:text-white">
                 No {tab === "internship" ? "internships" : "jobs"} found
               </p>
+
               <p className="mt-1 text-xs text-slate-500">
                 Try different keywords, location, or enable more sources
               </p>
             </div>
           ) : (
-            jobs.map((job, i) => (
-              <motion.div
-                key={job.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-              >
-                <JobCard
-                  job={job}
-                  isSaved={savedIds.has(job.id)}
-                  onSave={handleSave}
-                  onUnsave={handleUnsave}
-                  onTrack={handleTrack}
-                  onSelect={setSelectedJob}
-                  selected={selectedJob?.id === job.id}
-                />
-              </motion.div>
-            ))
-          )}
+  <>
+    {jobs.map((job, i) => (
+      <motion.div
+        key={job.id}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: i * 0.04 }}
+      >
+        <JobCard
+          job={job}
+          isSaved={savedIds.has(job.id)}
+          onSave={handleSave}
+          onUnsave={handleUnsave}
+          onTrack={handleTrack}
+          onApply={handleApply}
+          onSelect={setSelectedJob}
+          selected={selectedJob?.id === job.id}
+          locked={job.locked === true}
+          onUpgrade={handleUpgrade}
+        />
+      </motion.div>
+    ))}
+        {access.lockedCount > 0 &&
+          Array.from({ length: access.lockedCount }).map((_, index) => (
+            <motion.div
+              key={`locked-${index}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                delay: (jobs.length + index) * 0.04,
+              }}
+            >
+              <LockedJobCard onUpgrade={handleUpgrade} />
+            </motion.div>
+          ))}
+      </>
+    )}
         </div>
 
         <div className="hidden lg:col-span-5 lg:block">
@@ -330,8 +454,12 @@ export default function JobFinder() {
             className="absolute inset-0 bg-black/40"
             onClick={() => setSelectedJob(null)}
           />
+
           <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white dark:bg-slate-900">
-            <JobDetailPanel job={selectedJob} onClose={() => setSelectedJob(null)} />
+            <JobDetailPanel
+              job={selectedJob}
+              onClose={() => setSelectedJob(null)}
+            />
           </div>
         </div>
       )}
@@ -341,6 +469,14 @@ export default function JobFinder() {
           {toast}
         </div>
       )}
+
+      <UpgradeModal
+        isOpen={upgradeModalOpen}
+        onClose={closeUpgradeModal}
+        currentPlan={access.plan}
+        title={upgradeModalTitle}
+        message={upgradeModalMessage}
+      />
     </PageShell>
   );
 }

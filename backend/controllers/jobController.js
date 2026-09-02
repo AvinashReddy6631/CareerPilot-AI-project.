@@ -1,6 +1,17 @@
 const SavedJob = require("../models/SavedJob");
-const { searchJobs, getJobById, SOURCES } = require("../utils/jobCatalog");
-const { computeMatchScore } = require("../utils/jobMatcher");
+const Subscription = require("../models/Subscription");
+
+const PLANS = require("../config/plans");
+
+const {
+  searchJobs,
+  getJobById,
+  SOURCES,
+} = require("../utils/jobCatalog");
+
+const {
+  computeMatchScore,
+} = require("../utils/jobMatcher");
 
 const search = async (req, res) => {
   try {
@@ -15,7 +26,10 @@ const search = async (req, res) => {
     } = req.body?.query !== undefined ? req.body : req.query;
 
     const sourceList = sources
-      ? (Array.isArray(sources) ? sources : sources.split(",")).filter(Boolean)
+      ? (Array.isArray(sources)
+          ? sources
+          : sources.split(",")
+        ).filter(Boolean)
       : [];
 
     const result = searchJobs({
@@ -27,21 +41,89 @@ const search = async (req, res) => {
       limit: Number(limit),
     });
 
-    if (resumeText?.trim()) {
-      result.jobs = result.jobs.map((job) => {
-        const match = computeMatchScore(resumeText, job);
-        return { ...job, ...match };
-      });
-      result.jobs.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    // -----------------------------------------
+    // PLAN ACCESS
+    // -----------------------------------------
+
+    const access = await getUserJobAccess(req.user.id);
+    console.log("JOB ACCESS DEBUG:", access);
+
+    // -----------------------------------------
+    // FREE / BASIC
+    // Only show selected jobs
+    // -----------------------------------------
+
+    if (access.jobsAccess === "limited") {
+      const previewLimit = 4;
+
+      result.jobs = result.jobs.slice(0, previewLimit);
+
+      result.locked = true;
+      result.lockedCount = Math.max(
+        0,
+        result.total - result.jobs.length
+      );
+
+      result.access = {
+        plan: access.planKey,
+        level: "limited",
+        upgradeRequired: true,
+      };
     }
 
-    res.json({ success: true, ...result, availableSources: SOURCES });
+    // -----------------------------------------
+    // PRO / PREMIUM
+    // Full job access
+    // -----------------------------------------
+
+    if (access.jobsAccess === "full") {
+      result.locked = false;
+
+      result.access = {
+        plan: access.planKey,
+        level: "full",
+        upgradeRequired: false,
+      };
+    }
+
+    // -----------------------------------------
+    // Resume match scoring
+    // -----------------------------------------
+
+    if (resumeText?.trim()) {
+      result.jobs = result.jobs.map((job) => {
+        const match = computeMatchScore(
+          resumeText,
+          job
+        );
+
+        return {
+          ...job,
+          ...match,
+        };
+      });
+
+      result.jobs.sort(
+        (a, b) =>
+          (b.matchScore || 0) -
+          (a.matchScore || 0)
+      );
+    }
+
+    res.json({
+      success: true,
+      ...result,
+      availableSources: SOURCES,
+    });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
-
 const matchJob = async (req, res) => {
   try {
     const { jobId, resumeText } = req.body;
@@ -117,12 +199,42 @@ const removeSavedJob = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await SavedJob.findOneAndDelete({ _id: id, user: req.user.id });
+    await SavedJob.findOneAndDelete({
+      _id: id,
+      user: req.user.id,
+    });
+
     res.json({ success: true });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
+};
+
+
+// ADD THIS
+const getUserJobAccess = async (userId) => {
+  const subscription = await Subscription.findOne({
+    user: userId,
+  });
+
+  const planKey =
+    subscription?.status === "active"
+      ? subscription.plan
+      : "FREE";
+
+  const plan = PLANS[planKey] || PLANS.FREE;
+
+  const jobsAccess = plan.features?.jobs || "limited";
+
+  return {
+    planKey,
+    jobsAccess,
+    jobLimit: jobsAccess === "full" ? null : 4,
+  };
 };
 
 module.exports = {
