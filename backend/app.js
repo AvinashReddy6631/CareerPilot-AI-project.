@@ -37,6 +37,7 @@ const {
   errorHandler,
 } = require("./middleware/errorMiddleware");
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(helmet());
 const { apiLimiter } = require("./middleware/rateLimit");
