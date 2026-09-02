@@ -11,6 +11,7 @@ const resumeBuilderRoutes = require(
 const interviewRoutes = require(
   "./routes/interviewRoutes"
 );
+const paymentRoutes = require("./routes/paymentRoutes");
 const interviewHistoryRoutes = require(
   "./routes/interviewHistoryRoutes"
 );
@@ -20,6 +21,9 @@ const roadmapRoutes = require(
 
 const dashboardRoutes = require(
   "./routes/dashboardRoutes"
+);
+const paymentWebhookRoutes = require(
+  "./routes/paymentWebhookRoutes"
 );
 const jobRoutes = require("./routes/jobRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
@@ -40,6 +44,11 @@ app.use(
   cors({
     origin: "*",
   })
+);
+
+app.use(
+  "/api/payment/webhook",
+  paymentWebhookRoutes
 );
 
 app.use(express.json());
@@ -76,6 +85,7 @@ app.use(
   "/api/interview",
   interviewRoutes
 );
+app.use("/api/payment", paymentRoutes);
 
 app.use(
   "/api/interview-history",

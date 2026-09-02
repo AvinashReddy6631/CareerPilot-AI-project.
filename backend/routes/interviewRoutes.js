@@ -6,7 +6,9 @@ const {
   evaluateAnswer,
   generateFinalReport,
 } = require("../controllers/interviewController");
-
+const {
+  checkAIInterviewAccess,
+} = require("../middleware/aiInterviewAccess");
 const router = express.Router();
 
 const logRouteReached = (req, res, next) => {
@@ -23,15 +25,14 @@ const logJwtVerified = (req, res, next) => {
   });
   next();
 };
-
 router.post(
   "/generate-questions",
   logRouteReached,
   protect,
   logJwtVerified,
+  checkAIInterviewAccess,
   generateQuestions
 );
-
 router.use(protect);
 
 router.post(
