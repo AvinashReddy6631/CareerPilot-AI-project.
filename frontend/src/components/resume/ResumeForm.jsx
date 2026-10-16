@@ -74,7 +74,7 @@ export default function ResumeForm({
         title="ATS Templates"
         description="Pick a layout — switch anytime without losing content"
         icon={icons.template}
-        badge="5 templates"
+        badge="9 templates"
       >
         <TemplatePicker selected={data.template} onSelect={onTemplateChange} />
       </FormSection>

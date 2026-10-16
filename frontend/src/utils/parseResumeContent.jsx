@@ -106,12 +106,12 @@ export function getContactItems(personal = {}) {
 }
 
 export function getResumeTheme(template) {
-  const serif = template === "Professional" || template === "Executive";
+  const serif = template === "Professional" || template === "Executive" || template === "Academic";
   return {
     cssFont: serif ? "Georgia, 'Times New Roman', serif" : "Arial, Helvetica, sans-serif",
     pdfFont: serif ? "times" : "helvetica",
     docxFont: serif ? "Times New Roman" : "Arial",
-    nameWeight: template === "Minimal" ? 600 : 700,
+    nameWeight: template === "Minimal" || template === "Compact" ? 600 : 700,
     headingTracking: template === "Modern" ? "0.12em" : "0.06em",
   };
 }

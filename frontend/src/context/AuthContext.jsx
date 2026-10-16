@@ -4,9 +4,11 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import api from "../services/api";
 import { getTokenPayload, isTokenValid } from "../utils/authSession";
+import { recordDailyActivity } from "../services/streakService";
 
 const AuthContext = createContext();
 
@@ -74,6 +76,10 @@ export const AuthProvider = ({ children }) => {
       )
   );
 
+  const [streak, setStreak] = useState(null);
+  const [streakError, setStreakError] = useState("");
+  const recordedActivityToken = useRef(null);
+
   // Logout
   const logout = useCallback(() => {
     localStorage.removeItem("token");
@@ -82,6 +88,8 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setIsRestoring(false);
+    setStreak(null);
+    setStreakError("");
   }, []);
 
   // Verify the current token against the server.
@@ -107,6 +115,41 @@ export const AuthProvider = ({ children }) => {
       .finally(() => {
         if (!cancelled) {
           setIsRestoring(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // Keep activity tracking above dashboard rendering. The server is also
+  // idempotent, so browser refreshes, tabs, and concurrent requests cannot
+  // create more than one streak day.
+  useEffect(() => {
+    if (!token) {
+      recordedActivityToken.current = null;
+      return undefined;
+    }
+
+    if (recordedActivityToken.current === token) return undefined;
+    recordedActivityToken.current = token;
+
+    let cancelled = false;
+
+    recordDailyActivity()
+      .then((response) => {
+        if (!cancelled) {
+          setStreak(response.data?.streak || null);
+          setStreakError("");
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setStreakError(
+            error.response?.data?.message ||
+              "Unable to refresh your learning streak."
+          );
         }
       });
 
@@ -180,6 +223,8 @@ export const AuthProvider = ({ children }) => {
     setUser,
     updateUser,
     isRestoring,
+    streak,
+    streakError,
     isAuthenticated: Boolean(
       token && isTokenValid(token)
     ),

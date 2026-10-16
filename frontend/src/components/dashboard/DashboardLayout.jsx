@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
+import AICareerAssistant from "../shared/AICareerAssistant";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -48,6 +49,8 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      <AICareerAssistant />
     </div>
   );
 }

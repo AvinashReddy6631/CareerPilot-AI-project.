@@ -28,6 +28,12 @@ const JobApplication = require(
 const User = require(
   "../models/User"
 );
+const {
+  normalizeAnalyticsRange,
+  getRangeStart,
+  roundScore,
+  calculateScoreChange,
+} = require("../utils/dashboardAnalytics");
 
 const MAX_ACTIVITY_ITEMS = 20;
 
@@ -45,12 +51,11 @@ const toActivity = ({
   occurredAt,
 });
 
-const getAnalytics = async (
-  req,
-  res
-) => {
+const getAnalytics = async (req, res) => {
   try {
     const userId = req.user._id;
+    const range = normalizeAnalyticsRange(req.query?.range);
+    const rangeStart = getRangeStart(range);
     const legacyCountPromise = ResumeWorkspace
       .find({ user: userId })
       .distinct("legacyResumeId")
@@ -59,7 +64,51 @@ const getAnalytics = async (
         _id: { $nin: legacyResumeIds.filter(Boolean) },
       }));
 
-    const [workspacesCount, legacyCount, interviewMetrics, atsMetrics, applicationsSent] = await Promise.all([
+    const interviewTrendPipeline = [
+      {
+        $match: {
+          user: userId,
+          averageScore: { $type: "number", $gt: 0, $lte: 10 },
+        },
+      },
+      {
+        $addFields: {
+          recordedAt: { $ifNull: ["$interviewDate", "$createdAt"] },
+        },
+      },
+      ...(rangeStart ? [{ $match: { recordedAt: { $gte: rangeStart } } }] : []),
+      { $sort: { recordedAt: 1, _id: 1 } },
+      {
+        $project: {
+          _id: 1,
+          role: 1,
+          value: "$averageScore",
+          occurredAt: "$recordedAt",
+        },
+      },
+    ];
+
+    const atsTrendPipeline = [
+      ...(rangeStart ? [{ $match: { createdAt: { $gte: rangeStart } } }] : []),
+      { $sort: { createdAt: 1, _id: 1 } },
+      {
+        $project: {
+          _id: 1,
+          fileName: 1,
+          value: "$atsScore",
+          occurredAt: "$createdAt",
+        },
+      },
+    ];
+
+    const [
+      workspacesCount,
+      legacyCount,
+      interviewMetrics,
+      atsAnalytics,
+      interviewTrend,
+      applicationsSent,
+    ] = await Promise.all([
       ResumeWorkspace.countDocuments({ user: userId }),
       legacyCountPromise,
       Interview.aggregate([
@@ -74,9 +123,22 @@ const getAnalytics = async (
         },
       ]),
       Resume.aggregate([
-        { $match: { user: userId } },
-        { $group: { _id: null, atsAverageScore: { $avg: { $ifNull: ["$atsScore", 0] } } } },
+        { $match: { user: userId, atsScore: { $type: "number", $gte: 0, $lte: 100 } } },
+        {
+          $facet: {
+            summary: [
+              {
+                $group: {
+                  _id: null,
+                  atsAverageScore: { $avg: "$atsScore" },
+                },
+              },
+            ],
+            trend: atsTrendPipeline,
+          },
+        },
       ]),
+      InterviewHistory.aggregate(interviewTrendPipeline),
       JobApplication.countDocuments({ user: userId, status: { $ne: "saved" } }),
     ]);
     const resumesBuilt = workspacesCount + legacyCount;
@@ -84,7 +146,41 @@ const getAnalytics = async (
     const interviewsTaken = metrics?.interviewsTaken || 0;
     const averageScore = interviewsTaken ? Number(metrics.averageScore || 0).toFixed(1) : 0;
     const bestScore = metrics?.bestScore || 0;
-    const atsAverageScore = Math.round(atsMetrics[0]?.atsAverageScore || 0);
+    const atsAverageScore = Math.round(atsAnalytics[0]?.summary?.[0]?.atsAverageScore || 0);
+    const atsTrend = atsAnalytics[0]?.trend || [];
+
+    const normalizedInterviewTrend = interviewTrend.map((point) => ({
+      id: String(point._id),
+      role: point.role || "Interview practice",
+      value: roundScore(point.value),
+      occurredAt: point.occurredAt,
+    }));
+    const normalizedAtsTrend = atsTrend.map((point) => ({
+      id: String(point._id),
+      fileName: point.fileName || "Resume analysis",
+      value: roundScore(point.value, 0),
+      occurredAt: point.occurredAt,
+    }));
+    const getAverage = (points) =>
+      points.length
+        ? roundScore(points.reduce((total, point) => total + point.value, 0) / points.length)
+        : null;
+    const getBest = (points) =>
+      points.length ? Math.max(...points.map((point) => point.value)) : null;
+
+    const interviewChart = {
+      points: normalizedInterviewTrend,
+      totalCompleted: normalizedInterviewTrend.length,
+      averageScore: getAverage(normalizedInterviewTrend),
+      bestScore: getBest(normalizedInterviewTrend),
+    };
+    const atsChart = {
+      points: normalizedAtsTrend,
+      totalAnalyses: normalizedAtsTrend.length,
+      averageScore: getAverage(normalizedAtsTrend),
+      latestScore: normalizedAtsTrend.at(-1)?.value ?? null,
+      changeFromPrevious: calculateScoreChange(normalizedAtsTrend),
+    };
 
     res.json({
       resumesBuilt,
@@ -93,6 +189,11 @@ const getAnalytics = async (
       bestScore,
       atsAverageScore,
       applicationsSent,
+      charts: {
+        range,
+        interview: interviewChart,
+        ats: atsChart,
+      },
     });
   } catch (error) {
     res.status(500).json({

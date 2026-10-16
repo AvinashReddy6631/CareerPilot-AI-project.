@@ -1,6 +1,7 @@
 const express = require("express");
 
 const { protect } = require("../middleware/authMiddleware");
+const { jobRefreshLimiter } = require("../middleware/rateLimit");
 
 const {
   search,
@@ -8,6 +9,7 @@ const {
   saveJob,
   getSavedJobs,
   removeSavedJob,
+  refreshListings,
 } = require("../controllers/jobController");
 
 const router = express.Router();
@@ -16,6 +18,7 @@ const router = express.Router();
 router.get("/search", protect, search);
 router.post("/search", protect, search);
 router.post("/match", protect, matchJob);
+router.post("/refresh", protect, jobRefreshLimiter, refreshListings);
 
 // Saved jobs
 router.post("/saved", protect, saveJob);

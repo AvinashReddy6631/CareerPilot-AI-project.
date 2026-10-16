@@ -8,6 +8,8 @@ import StatCard from "../../components/dashboard/StatCard";
 import QuickActions from "../../components/dashboard/QuickActions";
 import ActivityFeed from "../../components/dashboard/ActivityFeed";
 import PerformanceCharts from "../../components/dashboard/PerformanceCharts";
+import StreakCard from "../../components/dashboard/StreakCard";
+import { useAuth } from "../../context/AuthContext";
 import {
   IconResume,
   IconATS,
@@ -25,16 +27,26 @@ const DEFAULT_STATS = {
 };
 
 export default function Dashboard() {
+  const { streak, streakError } = useAuth();
   const [stats, setStats] = useState(DEFAULT_STATS);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsRange, setAnalyticsRange] = useState("30d");
+  const [analyticsRetry, setAnalyticsRetry] = useState(0);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState("");
   const [activityLoading, setActivityLoading] = useState(true);
   const [activityError, setActivityError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchAnalytics = async () => {
       try {
-        const res = await fetchDashboardAnalytics();
+        setAnalyticsError("");
+        setLoading(true);
+        const res = await fetchDashboardAnalytics(analyticsRange);
+        if (cancelled) return;
         setStats({
           resumesBuilt: res.data.resumesBuilt ?? 0,
           atsAverageScore: res.data.atsAverageScore ?? 0,
@@ -42,34 +54,57 @@ export default function Dashboard() {
           bestScore: res.data.bestScore ?? 0,
           applicationsSent: res.data.applicationsSent ?? 0,
         });
+        setAnalytics(res.data?.charts || null);
       } catch (error) {
         console.error(error);
-        setStats(DEFAULT_STATS);
+        if (!cancelled) {
+          setStats(DEFAULT_STATS);
+          setAnalytics(null);
+          setAnalyticsError(
+            error.response?.data?.message ||
+              error.message ||
+              "Could not load dashboard analytics"
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
+
+    fetchAnalytics();
+    return () => {
+      cancelled = true;
+    };
+  }, [analyticsRange, analyticsRetry]);
+
+  useEffect(() => {
+    let cancelled = false;
 
     const fetchActivity = async () => {
       try {
         setActivityError("");
         const res = await fetchDashboardActivity();
+        if (cancelled) return;
         setActivities(res.data.activities || []);
       } catch (error) {
         console.error(error);
-        setActivityError(
-          error.response?.data?.message ||
-            error.message ||
-            "Could not load activity"
-        );
-        setActivities([]);
+        if (!cancelled) {
+          setActivityError(
+            error.response?.data?.message ||
+              error.message ||
+              "Could not load activity"
+          );
+          setActivities([]);
+        }
       } finally {
-        setActivityLoading(false);
+        if (!cancelled) setActivityLoading(false);
       }
     };
 
-    fetchAnalytics();
     fetchActivity();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const greeting = () => {
@@ -91,8 +126,6 @@ export default function Dashboard() {
           loading={loading}
           icon={IconResume}
           accent="indigo"
-          trend="12%"
-          trendUp
         />
         <StatCard
           label="ATS Average Score"
@@ -101,8 +134,6 @@ export default function Dashboard() {
           suffix="%"
           icon={IconATS}
           accent="violet"
-          trend="8%"
-          trendUp
         />
         <StatCard
           label="Interviews Taken"
@@ -110,8 +141,6 @@ export default function Dashboard() {
           loading={loading}
           icon={IconMock}
           accent="cyan"
-          trend="3"
-          trendUp
         />
         <StatCard
           label="Best Interview Score"
@@ -120,8 +149,6 @@ export default function Dashboard() {
           suffix="/10"
           icon={IconInterview}
           accent="emerald"
-          trend="0.6"
-          trendUp
         />
         <StatCard
           label="Applications Sent"
@@ -129,18 +156,31 @@ export default function Dashboard() {
           loading={loading}
           icon={IconApplications}
           accent="amber"
-          trend="2"
-          trendUp
         />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <PerformanceCharts />
+          <PerformanceCharts
+            analytics={analytics}
+            loading={loading}
+            error={analyticsError}
+            range={analyticsRange}
+            onRangeChange={setAnalyticsRange}
+            onRetry={() => setAnalyticsRetry((value) => value + 1)}
+          />
         </div>
         <div>
           <QuickActions />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <StreakCard
+          streak={streak}
+          loading={!streak && !streakError}
+          error={streakError}
+        />
       </div>
 
       <div className="mt-4">

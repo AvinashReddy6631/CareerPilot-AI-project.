@@ -34,6 +34,34 @@ export const TEMPLATES = [
     accent: "from-amber-600 to-slate-800",
     badge: "Premium",
   },
+  {
+    id: "Creative",
+    name: "Creative",
+    description: "Portfolio-forward layout with a distinctive editorial accent",
+    accent: "from-fuchsia-600 to-rose-500",
+    badge: "Portfolio",
+  },
+  {
+    id: "Technical",
+    name: "Technical",
+    description: "Structured technical profile with a focused skills column",
+    accent: "from-cyan-600 to-blue-700",
+    badge: "Engineering",
+  },
+  {
+    id: "Academic",
+    name: "Academic",
+    description: "Formal scholarly format for education and research profiles",
+    accent: "from-sky-700 to-slate-700",
+    badge: "Research",
+  },
+  {
+    id: "Compact",
+    name: "Compact",
+    description: "Space-efficient layout designed for crisp, readable one-pagers",
+    accent: "from-emerald-600 to-teal-700",
+    badge: "One page",
+  },
 ];
 
 export const EMPTY_RESUME = {

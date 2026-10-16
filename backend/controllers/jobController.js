@@ -6,8 +6,9 @@ const PLANS = require("../config/plans");
 const {
   searchJobs,
   getJobById,
-  SOURCES,
 } = require("../utils/jobCatalog");
+const { isSafeExternalUrl } = require("../services/jobSourceAdapters");
+const { getRefreshMetadata, refreshJobListings } = require("../services/jobRefreshService");
 
 const {
   computeMatchScore,
@@ -15,6 +16,7 @@ const {
 
 const search = async (req, res) => {
   try {
+    const searchParams = req.method === "GET" ? req.query : req.body;
     const {
       query = "",
       location = "",
@@ -23,20 +25,21 @@ const search = async (req, res) => {
       page = 1,
       limit = 20,
       resumeText = "",
-    } = req.body?.query !== undefined ? req.body : req.query;
+    } = searchParams || {};
 
-    const sourceList = sources
-      ? (Array.isArray(sources)
-          ? sources
-          : sources.split(",")
-        ).filter(Boolean)
-      : [];
+    const sourceList = Array.isArray(sources)
+      ? sources.filter((source) => typeof source === "string" && source.trim())
+      : typeof sources === "string"
+        ? sources.split(",").filter(Boolean)
+        : [];
 
-    const result = searchJobs({
+    const refreshMetadata = await getRefreshMetadata();
+    const result = await searchJobs({
       query,
       location,
       type,
       sources: sourceList,
+      sourceKeys: refreshMetadata.configuredSourceKeys,
       page: Number(page),
       limit: Number(limit),
     });
@@ -46,8 +49,6 @@ const search = async (req, res) => {
     // -----------------------------------------
 
     const access = await getUserJobAccess(req.user.id);
-    console.log("JOB ACCESS DEBUG:", access);
-
     // -----------------------------------------
     // FREE / BASIC
     // Only show selected jobs
@@ -110,17 +111,20 @@ const search = async (req, res) => {
       );
     }
 
+    const { configuredSourceKeys, ...refresh } = refreshMetadata;
+
     res.json({
       success: true,
       ...result,
-      availableSources: SOURCES,
+      availableSources: refresh.configuredSources,
+      refresh,
     });
   } catch (error) {
-    console.log(error);
+    console.error("Job search failed:", error.message);
 
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to load job listings. Please try again.",
     });
   }
 };
@@ -135,7 +139,7 @@ const matchJob = async (req, res) => {
       });
     }
 
-    const job = getJobById(jobId);
+    const job = await getJobById(jobId);
     if (!job) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
@@ -156,6 +160,13 @@ const saveJob = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Job details with jobId are required",
+      });
+    }
+
+    if (!isSafeExternalUrl(job.applyUrl)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid job application URL is required",
       });
     }
 
@@ -182,6 +193,35 @@ const saveJob = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const refreshListings = async (req, res) => {
+  const configuredAdmin = String(process.env.JOB_REFRESH_ADMIN_EMAIL || "").trim().toLowerCase();
+
+  if (!configuredAdmin || req.user.email?.toLowerCase() !== configuredAdmin) {
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized to refresh job listings",
+    });
+  }
+
+  try {
+    const result = await refreshJobListings();
+    if (!result.started) {
+      return res.status(409).json({
+        success: false,
+        message: "A job refresh is already in progress",
+      });
+    }
+
+    return res.json({ success: result.success, refresh: result });
+  } catch (error) {
+    console.error("Manual job refresh failed:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to refresh job listings. Existing listings were kept.",
+    });
   }
 };
 
@@ -243,4 +283,5 @@ module.exports = {
   saveJob,
   getSavedJobs,
   removeSavedJob,
+  refreshListings,
 };

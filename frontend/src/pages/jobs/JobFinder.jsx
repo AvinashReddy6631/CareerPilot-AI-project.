@@ -18,6 +18,18 @@ import { buildResumeText, hasResumeContent } from "../../utils/resumeText";
 
 const SOURCES = Object.keys(SOURCE_CONFIG);
 
+const formatRefreshTimestamp = (timestamp) => {
+  if (!timestamp) return "No successful refresh yet";
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "Date not provided";
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+};
+
 export default function JobFinder() {
   const [tab, setTab] = useState("job");
   const [query, setQuery] = useState("");
@@ -31,7 +43,12 @@ export default function JobFinder() {
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
   const [toast, setToast] = useState("");
-
+  const [refreshInfo, setRefreshInfo] = useState({
+    lastSuccessfulRefreshAt: null,
+    sourceStatuses: [],
+    configuredSources: [],
+    stale: false,
+  });
   const [access, setAccess] = useState({
     plan: "FREE",
     level: "limited",
@@ -78,6 +95,12 @@ export default function JobFinder() {
 
       setJobs(results);
       setTotal(res.data.total || 0);
+      setRefreshInfo(res.data.refresh || {
+        lastSuccessfulRefreshAt: null,
+        sourceStatuses: [],
+        configuredSources: [],
+        stale: false,
+      });
 
       setAccess({
         plan: res.data.access?.plan || "FREE",
@@ -222,7 +245,7 @@ export default function JobFinder() {
   return (
     <PageShell
       title="Job & Internship Discovery"
-      description="Search across LinkedIn, Internshala, Unstop, Indeed, and Naukri — with resume match scoring."
+      description="Search configured employer boards with resume match scoring. Coverage depends on the supported boards currently configured."
       action={
         <Link
           to="/applications"
@@ -253,6 +276,11 @@ export default function JobFinder() {
             {SOURCE_CONFIG[source].label}
           </button>
         ))}
+
+        <span className="ml-auto text-xs text-slate-400">
+          {loading ? "Loading listings…" : `Last updated: ${formatRefreshTimestamp(refreshInfo.lastSuccessfulRefreshAt)}`}
+          {refreshInfo.stale ? " · Some source results may be stale" : ""}
+        </span>
       </div>
 
       {/* Tabs + Search */}
@@ -328,9 +356,10 @@ export default function JobFinder() {
 
           <button
             type="submit"
-            className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+            disabled={loading}
+            className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Search
+            {loading ? "Searching…" : "Search"}
           </button>
         </form>
 
@@ -367,8 +396,15 @@ export default function JobFinder() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
-          {error}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={runSearch}
+            className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-red-100 dark:border-red-400/30 dark:hover:bg-red-500/10"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -399,7 +435,9 @@ export default function JobFinder() {
               </p>
 
               <p className="mt-1 text-xs text-slate-500">
-                Try different keywords, location, or enable more sources
+                {refreshInfo.configuredSources?.length
+                  ? "Try different keywords, location, or enable more sources"
+                  : "No supported employer boards are configured yet. Add a Greenhouse or Lever board to the backend environment."}
               </p>
             </div>
           ) : (

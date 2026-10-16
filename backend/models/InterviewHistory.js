@@ -68,6 +68,8 @@ const interviewHistorySchema =
     }
   );
 
+interviewHistorySchema.index({ user: 1, interviewDate: 1 });
+
 module.exports = mongoose.model(
   "InterviewHistory",
   interviewHistorySchema

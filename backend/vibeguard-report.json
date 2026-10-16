@@ -1,0 +1,83 @@
+{
+  "tool": "VibeGuard",
+  "version": "0.1.0",
+  "timestamp": "2026-10-05T14:54:25.725Z",
+  "project": {
+    "name": "backend",
+    "target": "C:\\Users\\Avinash\\OneDrive\\Desktop\\careerpilot-ai\\backend",
+    "filesScanned": 76
+  },
+  "summary": {
+    "CRITICAL": 1,
+    "HIGH": 3,
+    "MEDIUM": 2,
+    "LOW": 1,
+    "INFO": 0
+  },
+  "score": 30,
+  "findings": [
+    {
+      "id": "VG-ENV-001",
+      "severity": "HIGH",
+      "title": "Environment file detected",
+      "file": ".env",
+      "line": 1,
+      "description": "A potentially sensitive environment file exists inside the project.",
+      "recommendation": "Keep secrets outside source control and ensure sensitive .env files are ignored by Git."
+    },
+    {
+      "id": "VG-SECRET-001",
+      "severity": "CRITICAL",
+      "title": "Potential JWT secret detected",
+      "file": ".env",
+      "line": 5,
+      "description": "A value matching a sensitive credential pattern was detected.",
+      "recommendation": "Remove the secret from source code, rotate it if real, and use environment variables or a dedicated secret manager."
+    },
+    {
+      "id": "VG-HEADER-001",
+      "severity": "LOW",
+      "title": "Security headers were not detected",
+      "file": "Project-wide",
+      "line": "-",
+      "description": "No common HTTP security header configuration was detected.",
+      "recommendation": "Review and configure appropriate security headers for your application."
+    },
+    {
+      "id": "VG-LOG-001",
+      "severity": "HIGH",
+      "title": "Sensitive data exposed in logs: Password logged",
+      "file": "controllers\\authController.js",
+      "line": 199,
+      "description": "The application may write sensitive authentication or credential information to application logs.",
+      "recommendation": "Never log passwords, tokens, authorization headers, or other secrets. Redact sensitive fields before logging."
+    },
+    {
+      "id": "VG-AUTHZ-001",
+      "severity": "MEDIUM",
+      "title": "Potential authorization-sensitive code detected",
+      "file": "controllers\\resumeBuilderController.js",
+      "line": 204,
+      "description": "The project contains code that may require resource-level authorization.",
+      "recommendation": "Verify that users can access or modify only resources they are authorized to access."
+    },
+    {
+      "id": "VG-AUTHZ-001",
+      "severity": "MEDIUM",
+      "title": "Potential authorization-sensitive code detected",
+      "file": "controllers\\roadmapController.js",
+      "line": 1184,
+      "description": "The project contains code that may require resource-level authorization.",
+      "recommendation": "Verify that users can access or modify only resources they are authorized to access."
+    },
+    {
+      "id": "VG-DEP-001",
+      "severity": "HIGH",
+      "title": "Dependency vulnerabilities detected",
+      "file": "package.json",
+      "line": "-",
+      "description": "11 dependency vulnerability/vulnerabilities reported by npm audit.",
+      "recommendation": "Run npm audit and review the vulnerable packages."
+    }
+  ]
+}

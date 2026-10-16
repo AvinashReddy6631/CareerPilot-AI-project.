@@ -1,0 +1,119 @@
+{
+  "tool": "VibeGuard",
+  "version": "0.1.0",
+  "timestamp": "2026-10-05T14:32:41.737Z",
+  "project": {
+    "name": "frontend",
+    "target": "C:\\Users\\Avinash\\OneDrive\\Desktop\\careerpilot-ai\\frontend",
+    "filesScanned": 110
+  },
+  "summary": {
+    "CRITICAL": 0,
+    "HIGH": 4,
+    "MEDIUM": 6,
+    "LOW": 1,
+    "INFO": 0
+  },
+  "score": 14,
+  "findings": [
+    {
+      "id": "VG-ENV-001",
+      "severity": "HIGH",
+      "title": "Environment file detected",
+      "file": ".env",
+      "line": 1,
+      "description": "A potentially sensitive environment file exists inside the project.",
+      "recommendation": "Keep secrets outside source control and ensure sensitive .env files are ignored by Git."
+    },
+    {
+      "id": "VG-HEADER-001",
+      "severity": "LOW",
+      "title": "Security headers were not detected",
+      "file": "Project-wide",
+      "line": "-",
+      "description": "No common HTTP security header configuration was detected.",
+      "recommendation": "Review and configure appropriate security headers for your application."
+    },
+    {
+      "id": "VG-SQL-001",
+      "severity": "HIGH",
+      "title": "Potential SQL injection: SQL query with template interpolation",
+      "file": "src\\services\\jobService.js",
+      "line": 17,
+      "description": "The project contains a SQL query that may incorporate dynamic input without safe parameterization.",
+      "recommendation": "Use parameterized queries or prepared statements. Never concatenate or directly interpolate untrusted input into SQL queries."
+    },
+    {
+      "id": "VG-SQL-001",
+      "severity": "HIGH",
+      "title": "Potential SQL injection: SQL query with template interpolation",
+      "file": "src\\services\\resumeService.js",
+      "line": 16,
+      "description": "The project contains a SQL query that may incorporate dynamic input without safe parameterization.",
+      "recommendation": "Use parameterized queries or prepared statements. Never concatenate or directly interpolate untrusted input into SQL queries."
+    },
+    {
+      "id": "VG-TLS-001",
+      "severity": "MEDIUM",
+      "title": "Potential insecure transport: HTTP URL",
+      "file": "package-lock.json",
+      "line": 44,
+      "description": "The project appears to use an insecure transport configuration that may expose data or weaken TLS protection.",
+      "recommendation": "Use HTTPS/TLS for network communication and never disable certificate validation in production."
+    },
+    {
+      "id": "VG-TLS-001",
+      "severity": "MEDIUM",
+      "title": "Potential insecure transport: HTTP URL",
+      "file": "src\\components\\profile\\ProfileHeader.jsx",
+      "line": 91,
+      "description": "The project appears to use an insecure transport configuration that may expose data or weaken TLS protection.",
+      "recommendation": "Use HTTPS/TLS for network communication and never disable certificate validation in production."
+    },
+    {
+      "id": "VG-TLS-001",
+      "severity": "MEDIUM",
+      "title": "Potential insecure transport: HTTP URL",
+      "file": "src\\services\\api.js",
+      "line": 4,
+      "description": "The project appears to use an insecure transport configuration that may expose data or weaken TLS protection.",
+      "recommendation": "Use HTTPS/TLS for network communication and never disable certificate validation in production."
+    },
+    {
+      "id": "VG-TLS-001",
+      "severity": "MEDIUM",
+      "title": "Potential insecure transport: HTTP URL",
+      "file": "src\\utils\\parseResumeContent.jsx",
+      "line": 22,
+      "description": "The project appears to use an insecure transport configuration that may expose data or weaken TLS protection.",
+      "recommendation": "Use HTTPS/TLS for network communication and never disable certificate validation in production."
+    },
+    {
+      "id": "VG-TLS-001",
+      "severity": "MEDIUM",
+      "title": "Potential insecure transport: HTTP URL",
+      "file": "src\\utils\\roadmapEnricher.js",
+      "line": 2,
+      "description": "The project appears to use an insecure transport configuration that may expose data or weaken TLS protection.",
+      "recommendation": "Use HTTPS/TLS for network communication and never disable certificate validation in production."
+    },
+    {
+      "id": "VG-TLS-001",
+      "severity": "MEDIUM",
+      "title": "Potential insecure transport: HTTP URL",
+      "file": "src\\utils\\validation.js",
+      "line": 38,
+      "description": "The project appears to use an insecure transport configuration that may expose data or weaken TLS protection.",
+      "recommendation": "Use HTTPS/TLS for network communication and never disable certificate validation in production."
+    },
+    {
+      "id": "VG-DEP-001",
+      "severity": "HIGH",
+      "title": "Dependency vulnerabilities detected",
+      "file": "package.json",
+      "line": "-",
+      "description": "14 dependency vulnerability/vulnerabilities reported by npm audit.",
+      "recommendation": "Run npm audit and review the vulnerable packages."
+    }
+  ]
+}

@@ -3,6 +3,15 @@ import { useState } from "react";
 import SourceBadge from "./SourceBadge";
 import MatchScoreBadge from "./MatchScoreBadge";
 
+const formatPublishedDate = (publishedAt) => {
+  if (!publishedAt) return "Date not provided";
+
+  const date = new Date(publishedAt);
+  if (Number.isNaN(date.getTime())) return "Date not provided";
+
+  return `Posted ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date)}`;
+};
+
 export default function JobCard({
   job,
   isSaved,
@@ -110,7 +119,7 @@ export default function JobCard({
                 clipRule="evenodd"
               />
             </svg>
-            {job.location}
+            {job.location || "Location not provided"}
           </span>
 
           <span className="flex items-center gap-1">
@@ -128,12 +137,12 @@ export default function JobCard({
               />
             </svg>
 
-            {job.salary}
+            {job.salary || "Salary not provided"}
           </span>
 
-          <span>{job.experience}</span>
+          <span>{job.experience || job.employmentType || "Experience not provided"}</span>
 
-          <span>{job.postedDaysAgo}d ago</span>
+          <span>{formatPublishedDate(job.publishedAt)}</span>
         </div>
 
         {/* Skills */}

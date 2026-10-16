@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -43,6 +44,10 @@ const SEARCH_ITEMS = [
   { label: "Application Tracker", path: "/applications" },
 ];
 
+const USER_MENU_GAP = 8;
+const USER_MENU_MARGIN = 12;
+const USER_MENU_WIDTH = 192;
+
 export default function TopNavbar({ onMenuClick }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,10 +58,12 @@ export default function TopNavbar({ onMenuClick }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [userMenuPosition, setUserMenuPosition] = useState(null);
 
   const searchRef = useRef(null);
   const notifRef = useRef(null);
   const userRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   const closeDropdowns = useCallback(({ clearSearch = false } = {}) => {
     setSearchOpen(false);
@@ -74,7 +81,13 @@ export default function TopNavbar({ onMenuClick }) {
     const handleClick = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false);
-      if (userRef.current && !userRef.current.contains(e.target)) setUserOpen(false);
+      if (
+        userRef.current &&
+        !userRef.current.contains(e.target) &&
+        !userMenuRef.current?.contains(e.target)
+      ) {
+        setUserOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -88,6 +101,66 @@ export default function TopNavbar({ onMenuClick }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeDropdowns]);
+
+  const updateUserMenuPosition = useCallback(() => {
+    const trigger = userRef.current;
+    if (!trigger) return;
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const availableWidth = Math.max(0, window.innerWidth - USER_MENU_MARGIN * 2);
+    const menuWidth = Math.min(USER_MENU_WIDTH, availableWidth);
+    const menuHeight = Math.min(
+      userMenuRef.current?.offsetHeight ?? 152,
+      Math.max(0, window.innerHeight - USER_MENU_MARGIN * 2)
+    );
+    const preferredTop = triggerRect.bottom + USER_MENU_GAP;
+    const topAboveTrigger = triggerRect.top - USER_MENU_GAP - menuHeight;
+    const canPlaceBelow = preferredTop + menuHeight <= window.innerHeight - USER_MENU_MARGIN;
+    const canPlaceAbove = topAboveTrigger >= USER_MENU_MARGIN;
+    const top =
+      canPlaceBelow || !canPlaceAbove
+        ? Math.min(
+            preferredTop,
+            Math.max(USER_MENU_MARGIN, window.innerHeight - menuHeight - USER_MENU_MARGIN)
+          )
+        : topAboveTrigger;
+    const left = Math.min(
+      Math.max(USER_MENU_MARGIN, triggerRect.right - menuWidth),
+      Math.max(USER_MENU_MARGIN, window.innerWidth - menuWidth - USER_MENU_MARGIN)
+    );
+
+    setUserMenuPosition((currentPosition) => {
+      if (
+        currentPosition?.top === top &&
+        currentPosition.left === left &&
+        currentPosition.width === menuWidth
+      ) {
+        return currentPosition;
+      }
+
+      return { top, left, width: menuWidth };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!userOpen) return undefined;
+
+    let animationFrame;
+    const schedulePositionUpdate = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(updateUserMenuPosition);
+    };
+
+    schedulePositionUpdate();
+    window.addEventListener("resize", schedulePositionUpdate);
+    window.addEventListener("scroll", schedulePositionUpdate, true);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", schedulePositionUpdate);
+      window.removeEventListener("scroll", schedulePositionUpdate, true);
+    };
+  }, [updateUserMenuPosition, userOpen]);
 
   const filteredSearch = SEARCH_ITEMS.filter((item) =>
     item.label.toLowerCase().includes(searchQuery.toLowerCase())
@@ -114,6 +187,7 @@ export default function TopNavbar({ onMenuClick }) {
 
   const toggleUserMenu = () => {
     setUserOpen((open) => !open);
+    setUserMenuPosition(null);
     setSearchOpen(false);
     setNotifOpen(false);
   };
@@ -256,44 +330,58 @@ export default function TopNavbar({ onMenuClick }) {
             className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-violet-600 text-xs font-bold text-white ring-2 ring-white dark:ring-slate-950"
             aria-label="User menu"
             aria-expanded={userOpen}
+            aria-controls="user-menu"
           >
             CP
           </button>
-
-          {userOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">CareerPilot User</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Free plan</p>
-              </div>
-              <ul className="p-1">
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigate("/profile");
-                      closeDropdowns();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-                  >
-                    <IconProfile className="h-4 w-4" />
-                    Profile
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
-                  >
-                    Sign out
-                  </button>
-                </li>
-              </ul>
-            </div>
-          )}
         </div>
       </div>
+
+      {userOpen &&
+        createPortal(
+          <div
+            ref={userMenuRef}
+            id="user-menu"
+            style={{
+              top: userMenuPosition?.top ?? 0,
+              left: userMenuPosition?.left ?? 0,
+              width: userMenuPosition?.width ?? USER_MENU_WIDTH,
+              maxHeight: `calc(100dvh - ${USER_MENU_MARGIN * 2}px)`,
+              visibility: userMenuPosition ? "visible" : "hidden",
+            }}
+            className="fixed z-[70] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">CareerPilot User</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Free plan</p>
+            </div>
+            <ul className="p-1">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate("/profile");
+                    closeDropdowns();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <IconProfile className="h-4 w-4" />
+                  Profile
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                >
+                  Sign out
+                </button>
+              </li>
+            </ul>
+          </div>,
+          document.body
+        )}
     </header>
   );
 }

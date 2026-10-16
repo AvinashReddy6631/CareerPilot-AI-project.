@@ -11,10 +11,12 @@ const usageSchema = new mongoose.Schema(
     },
 
     // Lifetime AI interview trial
-    aiInterviewTrialUsed: {
-      type: Boolean,
-      default: false,
-    },
+    // Lifetime AI interview usage
+        aiInterviewUsed: {
+          type: Number,
+          default: 0,
+          min: 0,
+        },
 
     // Application quota usage for the current billing period
     applicationUsage: {

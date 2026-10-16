@@ -28,6 +28,8 @@ const paymentWebhookRoutes = require(
 const jobRoutes = require("./routes/jobRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const profileRoutes = require("./routes/profileRoutes");
+const dsaRoutes = require("./routes/dsaRoutes");
+const streakRoutes = require("./routes/streakRoutes");
 
 
 
@@ -37,36 +39,35 @@ const {
   errorHandler,
 } = require("./middleware/errorMiddleware");
 const app = express();
-app.set("trust proxy", 1);
 
-app.use(helmet());
-const { apiLimiter } = require("./middleware/rateLimit");
-app.use(apiLimiter);
+app.set("trust proxy", 1);
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:3000",
+  "https://career-pilot-ai-project-8plz.vercel.app",
+  "https://career-pilot-ai-project.vercel.app",
+  "https://careerpilot-pro.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) {
+      if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(
-        new Error("Not allowed by CORS")
-      );
+      return callback(new Error("Not allowed by CORS"));
     },
+    credentials: true,
   })
 );
 
+app.use(helmet());
 
+const { apiLimiter } = require("./middleware/rateLimit");
+app.use(apiLimiter);
 
 app.use(
   "/api/payment/webhook",
@@ -126,6 +127,8 @@ app.use(
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/dsa", dsaRoutes);
+app.use("/api/streak", streakRoutes);
 
 app.use(notFound);
 

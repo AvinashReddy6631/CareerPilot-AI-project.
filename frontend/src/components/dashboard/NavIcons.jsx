@@ -58,6 +58,14 @@ export function IconRoadmap({ className = iconClass }) {
   );
 }
 
+export function IconCode({ className = iconClass }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M7.5 5L3 10l4.5 5M12.5 5L17 10l-4.5 5M11.5 3.5l-3 13" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconJobs({ className = iconClass }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">

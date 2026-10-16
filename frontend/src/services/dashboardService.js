@@ -1,5 +1,6 @@
 import api from "./api";
 
-export const fetchDashboardAnalytics = () => api.get("/dashboard/analytics");
+export const fetchDashboardAnalytics = (range = "30d") =>
+  api.get("/dashboard/analytics", { params: { range } });
 
 export const fetchDashboardActivity = () => api.get("/dashboard/activity");

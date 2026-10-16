@@ -2,10 +2,14 @@ const Subscription = require("../models/Subscription");
 const Usage = require("../models/Usage");
 const PLANS = require("../config/plans");
 
+const FREE_AI_INTERVIEW_LIMIT = 2;
+
 const checkAIInterviewAccess = async (req, res, next) => {
   try {
+    const userId = req.user.id;
+
     const subscription = await Subscription.findOne({
-      user: req.user.id,
+      user: userId,
     });
 
     const planKey =
@@ -31,55 +35,71 @@ const checkAIInterviewAccess = async (req, res, next) => {
       return next();
     }
 
-    // FREE and BASIC get exactly one lifetime trial
+    // FREE and BASIC get 2 lifetime AI interviews
     if (plan.features.aiInterview === "trial") {
-      try {
-        const usage = await Usage.findOneAndUpdate(
+      let usage = await Usage.findOne({
+        user: userId,
+      });
+
+      // First AI interview for this user
+      if (!usage) {
+        try {
+          usage = await Usage.create({
+            user: userId,
+            aiInterviewUsed: 1,
+          });
+        } catch (error) {
+          // Another request may have created the Usage document
+          // at the same time. Fetch it again.
+          if (error.code === 11000) {
+            usage = await Usage.findOne({
+              user: userId,
+            });
+          } else {
+            throw error;
+          }
+        }
+      } else {
+        // User already has a Usage document.
+        // Atomically allow another interview only if
+        // they have used fewer than 2.
+        usage = await Usage.findOneAndUpdate(
           {
-            user: req.user.id,
-            aiInterviewTrialUsed: false,
-          },
-          {
-            $set: {
-              aiInterviewTrialUsed: true,
+            user: userId,
+            aiInterviewUsed: {
+              $lt: FREE_AI_INTERVIEW_LIMIT,
             },
           },
           {
-            returnDocument: "after",
-            upsert: true,
-            setDefaultsOnInsert: true,
+            $inc: {
+              aiInterviewUsed: 1,
+            },
+          },
+          {
+            new: true,
           }
         );
-
-        // Trial successfully claimed
-        if (usage) {
-          req.subscription = subscription;
-          req.plan = planKey;
-          req.planDetails = plan;
-
-          return next();
-        }
-      } catch (error) {
-        // Another simultaneous request may have already
-        // created the Usage document.
-        if (error.code === 11000) {
-          return res.status(403).json({
-            success: false,
-            message: "Your AI interview trial has already been used",
-            plan: planKey,
-            upgradeRequired: true,
-          });
-        }
-
-        throw error;
       }
 
-      return res.status(403).json({
-        success: false,
-        message: "Your AI interview trial has already been used",
-        plan: planKey,
-        upgradeRequired: true,
-      });
+      // No usage document or limit already reached
+      if (!usage) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "You have used all 2 AI interviews on your current plan.",
+          plan: planKey,
+          used: FREE_AI_INTERVIEW_LIMIT,
+          limit: FREE_AI_INTERVIEW_LIMIT,
+          remaining: 0,
+          upgradeRequired: true,
+        });
+      }
+
+      req.subscription = subscription;
+      req.plan = planKey;
+      req.planDetails = plan;
+
+      return next();
     }
 
     return res.status(403).json({

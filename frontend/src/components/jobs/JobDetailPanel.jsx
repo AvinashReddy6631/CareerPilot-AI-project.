@@ -52,9 +52,9 @@ export default function JobDetailPanel({ job, onClose }) {
 
       <div className="space-y-5 p-5">
         <div className="flex flex-wrap gap-3 text-sm text-slate-600 dark:text-slate-400">
-          <span>📍 {job.location}</span>
-          <span>💰 {job.salary}</span>
-          <span>🕐 {job.experience}</span>
+          <span>📍 {job.location || "Location not provided"}</span>
+          <span>💰 {job.salary || "Salary not provided"}</span>
+          <span>🕐 {job.experience || job.employmentType || "Experience not provided"}</span>
         </div>
 
         {job.matchScore != null && (
@@ -101,7 +101,7 @@ export default function JobDetailPanel({ job, onClose }) {
             Description
           </h3>
           <p className="mt-2 break-words text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-            {job.description}
+            {job.description || "Description not provided by the source."}
           </p>
         </div>
 

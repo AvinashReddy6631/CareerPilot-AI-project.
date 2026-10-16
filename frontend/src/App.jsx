@@ -21,6 +21,7 @@ const MockInterview = lazy(() => import("./pages/interview/MockInterview"));
 const JobFinder = lazy(() => import("./pages/jobs/JobFinder"));
 const ApplicationTracker = lazy(() => import("./pages/applications/ApplicationTracker"));
 const Profile = lazy(() => import("./pages/profile/Profile"));
+const DsaLearning = lazy(() => import("./pages/dsa/DsaLearning"));
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
                   <Route path="/roadmap" element={<CareerRoadmap />} />
                   <Route path="/jobs" element={<JobFinder />} />
                   <Route path="/applications" element={<ApplicationTracker />} />
+                  <Route path="/dsa" element={<DsaLearning />} />
                   <Route path="/profile" element={<Profile />} />
                 </Route>
               </Routes>
